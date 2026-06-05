@@ -1,0 +1,326 @@
+{
+  "t-shirts": {
+    "title": "T-Shirts",
+    "fit": "Standard regular fit. Order your usual size.",
+    "rows": [
+      {
+        "size": "S",
+        "chest": {
+          "in": "36-38",
+          "cm": "91-97"
+        },
+        "length": {
+          "in": "28",
+          "cm": "71"
+        },
+        "shoulder": {
+          "in": "17.0",
+          "cm": "43"
+        }
+      },
+      {
+        "size": "M",
+        "chest": {
+          "in": "38-40",
+          "cm": "97-102"
+        },
+        "length": {
+          "in": "29",
+          "cm": "74"
+        },
+        "shoulder": {
+          "in": "17.5",
+          "cm": "44"
+        }
+      },
+      {
+        "size": "L",
+        "chest": {
+          "in": "40-42",
+          "cm": "102-107"
+        },
+        "length": {
+          "in": "30",
+          "cm": "76"
+        },
+        "shoulder": {
+          "in": "18.0",
+          "cm": "46"
+        }
+      },
+      {
+        "size": "XL",
+        "chest": {
+          "in": "42-44",
+          "cm": "107-112"
+        },
+        "length": {
+          "in": "31",
+          "cm": "79"
+        },
+        "shoulder": {
+          "in": "18.5",
+          "cm": "47"
+        }
+      },
+      {
+        "size": "XXL",
+        "chest": {
+          "in": "44-46",
+          "cm": "112-117"
+        },
+        "length": {
+          "in": "32",
+          "cm": "81"
+        },
+        "shoulder": {
+          "in": "19.0",
+          "cm": "48"
+        }
+      }
+    ]
+  },
+  "oversized-t-shirts": {
+    "title": "Oversized T-Shirts",
+    "fit": "This is an oversized fit. Order your regular size for the intended oversized look. Size down for a slightly relaxed fit.",
+    "rows": [
+      {
+        "size": "S",
+        "chest": {
+          "in": "44",
+          "cm": "112"
+        },
+        "length": {
+          "in": "27",
+          "cm": "69"
+        },
+        "shoulder": {
+          "in": "19.5",
+          "cm": "50"
+        }
+      },
+      {
+        "size": "M",
+        "chest": {
+          "in": "46",
+          "cm": "117"
+        },
+        "length": {
+          "in": "28",
+          "cm": "71"
+        },
+        "shoulder": {
+          "in": "20.0",
+          "cm": "51"
+        }
+      },
+      {
+        "size": "L",
+        "chest": {
+          "in": "48",
+          "cm": "122"
+        },
+        "length": {
+          "in": "29",
+          "cm": "74"
+        },
+        "shoulder": {
+          "in": "20.5",
+          "cm": "52"
+        }
+      },
+      {
+        "size": "XL",
+        "chest": {
+          "in": "50",
+          "cm": "127"
+        },
+        "length": {
+          "in": "30",
+          "cm": "76"
+        },
+        "shoulder": {
+          "in": "21.0",
+          "cm": "53"
+        }
+      },
+      {
+        "size": "XXL",
+        "chest": {
+          "in": "52",
+          "cm": "132"
+        },
+        "length": {
+          "in": "31",
+          "cm": "79"
+        },
+        "shoulder": {
+          "in": "21.5",
+          "cm": "55"
+        }
+      }
+    ]
+  },
+  "hoodies": {
+    "title": "Hoodies",
+    "fit": "Relaxed fit for ultimate comfort. Order normal size.",
+    "rows": [
+      {
+        "size": "S",
+        "chest": {
+          "in": "42-44",
+          "cm": "107-112"
+        },
+        "length": {
+          "in": "26.5",
+          "cm": "67"
+        },
+        "shoulder": {
+          "in": "18.5",
+          "cm": "47"
+        }
+      },
+      {
+        "size": "M",
+        "chest": {
+          "in": "44-46",
+          "cm": "112-117"
+        },
+        "length": {
+          "in": "27.5",
+          "cm": "70"
+        },
+        "shoulder": {
+          "in": "19.0",
+          "cm": "48"
+        }
+      },
+      {
+        "size": "L",
+        "chest": {
+          "in": "46-48",
+          "cm": "117-122"
+        },
+        "length": {
+          "in": "28.5",
+          "cm": "72"
+        },
+        "shoulder": {
+          "in": "19.5",
+          "cm": "50"
+        }
+      },
+      {
+        "size": "XL",
+        "chest": {
+          "in": "48-50",
+          "cm": "122-127"
+        },
+        "length": {
+          "in": "29.5",
+          "cm": "75"
+        },
+        "shoulder": {
+          "in": "20.0",
+          "cm": "51"
+        }
+      },
+      {
+        "size": "XXL",
+        "chest": {
+          "in": "50-52",
+          "cm": "127-132"
+        },
+        "length": {
+          "in": "30.5",
+          "cm": "77"
+        },
+        "shoulder": {
+          "in": "20.5",
+          "cm": "52"
+        }
+      }
+    ]
+  },
+  "shirts": {
+    "title": "Shirts",
+    "fit": "Tailored fit. Look smart, feel comfortable.",
+    "rows": [
+      {
+        "size": "S",
+        "chest": {
+          "in": "38",
+          "cm": "97"
+        },
+        "length": {
+          "in": "29.5",
+          "cm": "75"
+        },
+        "shoulder": {
+          "in": "17.5",
+          "cm": "44"
+        }
+      },
+      {
+        "size": "M",
+        "chest": {
+          "in": "40",
+          "cm": "102"
+        },
+        "length": {
+          "in": "30.5",
+          "cm": "77"
+        },
+        "shoulder": {
+          "in": "18.0",
+          "cm": "46"
+        }
+      },
+      {
+        "size": "L",
+        "chest": {
+          "in": "42",
+          "cm": "107"
+        },
+        "length": {
+          "in": "31.5",
+          "cm": "80"
+        },
+        "shoulder": {
+          "in": "18.5",
+          "cm": "47"
+        }
+      },
+      {
+        "size": "XL",
+        "chest": {
+          "in": "44",
+          "cm": "112"
+        },
+        "length": {
+          "in": "32.5",
+          "cm": "83"
+        },
+        "shoulder": {
+          "in": "19.0",
+          "cm": "48"
+        }
+      },
+      {
+        "size": "XXL",
+        "chest": {
+          "in": "46",
+          "cm": "117"
+        },
+        "length": {
+          "in": "33.5",
+          "cm": "85"
+        },
+        "shoulder": {
+          "in": "19.5",
+          "cm": "50"
+        }
+      }
+    ]
+  }
+}
