@@ -42,10 +42,8 @@ export default function AdminSettingsPage() {
             return;
           }
         }
-      } catch (err) {
-        console.error('Failed to load settings:', err);
+      } catch {
       }
-      // Fallback
       setSizeCharts(JSON.parse(JSON.stringify(defaultSizeCharts)));
       setLoading(false);
     }
@@ -104,8 +102,7 @@ export default function AdminSettingsPage() {
       } else {
         toast.error('Failed to save size charts');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('An error occurred while saving');
     } finally {
       setSaving(false);

@@ -80,8 +80,7 @@ export default function SizeGuidePage() {
             setSizeCharts(data);
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch size guide config:', error);
+      } catch {
       } finally {
         setLoading(false);
       }

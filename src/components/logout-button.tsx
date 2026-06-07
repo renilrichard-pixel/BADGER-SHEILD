@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { toast } from 'sonner';
+import { cartStore } from '@/lib/cart-store';
+import { wishlistStore } from '@/lib/wishlist-store';
 
 export function LogoutButton() {
   const router = useRouter();
@@ -16,11 +18,15 @@ export function LogoutButton() {
         toast.error(error.message || 'Logout failed');
         return;
       }
+      // Clear cart and wishlist immediately
+      cartStore.clearCart();
+      wishlistStore.clear();
       toast.success('Successfully logged out');
       router.push('/');
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || 'Logout failed');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Logout failed';
+      toast.error(message);
     }
   };
 
