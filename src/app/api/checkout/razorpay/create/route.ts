@@ -33,8 +33,8 @@ export async function POST(request: Request) {
 
     // Fetch actual prices from Sanity
     const productIds = items.map((item) => item.productId);
-    const dbProducts = await writeClient.fetch<Array<{ _id: string; price: number }>>(
-      `*[_id in $productIds] { _id, price }`,
+    const dbProducts = await writeClient.fetch<Array<{ _id: string; price: number; salePrice?: number }>>(
+      `*[_id in $productIds] { _id, price, salePrice }`,
       { productIds }
     );
 
@@ -44,7 +44,8 @@ export async function POST(request: Request) {
       if (!dbProduct) {
         return NextResponse.json({ error: `Product ${item.name} no longer exists.` }, { status: 400 });
       }
-      serverSubtotal += dbProduct.price * item.quantity;
+      const activePrice = (dbProduct.salePrice !== undefined && dbProduct.salePrice !== null) ? dbProduct.salePrice : dbProduct.price;
+      serverSubtotal += activePrice * item.quantity;
     }
 
     const serverShipping = serverSubtotal > 5000 ? 0 : 250;

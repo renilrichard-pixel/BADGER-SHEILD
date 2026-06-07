@@ -62,8 +62,8 @@ export async function POST(request: Request) {
     // 1. Recalculate true order total from official Sanity prices
     const items = order.items || [];
     const productIds = items.map((item: any) => item.productId);
-    const dbProducts = await sanityClient.fetch<Array<{ _id: string; price: number }>>(
-      `*[_id in $productIds] { _id, price }`,
+    const dbProducts = await sanityClient.fetch<Array<{ _id: string; price: number; salePrice?: number }>>(
+      `*[_id in $productIds] { _id, price, salePrice }`,
       { productIds }
     );
 
@@ -73,7 +73,8 @@ export async function POST(request: Request) {
       if (!dbProduct) {
         return NextResponse.json({ verified: false, error: 'Product in order no longer exists.' }, { status: 400 });
       }
-      serverSubtotal += dbProduct.price * item.quantity;
+      const activePrice = (dbProduct.salePrice !== undefined && dbProduct.salePrice !== null) ? dbProduct.salePrice : dbProduct.price;
+      serverSubtotal += activePrice * item.quantity;
     }
     const serverShipping = serverSubtotal > 5000 ? 0 : 250;
     const serverTotal = serverSubtotal + serverShipping;
