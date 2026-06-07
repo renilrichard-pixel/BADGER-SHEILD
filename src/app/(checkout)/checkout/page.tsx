@@ -210,7 +210,7 @@ export default function CheckoutPage() {
     const rzpRes = await fetch('/api/checkout/razorpay/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: total, orderId }),
+      body: JSON.stringify({ items: selectedItems.map(i => ({ productId: i.productId, name: i.name, quantity: i.quantity })), orderId }),
     }).catch(() => null);
 
     if (!rzpRes?.ok) {
@@ -224,7 +224,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const rzpOrder = await rzpRes.json();
+    const { order: rzpOrder, subtotal: calculatedSubtotal, shipping: calculatedShipping, total: calculatedTotal } = await rzpRes.json();
 
     const customer_info = {
       first_name: addr.first_name,
@@ -242,9 +242,9 @@ export default function CheckoutPage() {
       id: orderId,
       status: 'pending',
       items: selectedItems,
-      subtotal,
-      shipping,
-      total,
+      subtotal: calculatedSubtotal,
+      shipping: calculatedShipping,
+      total: calculatedTotal,
       payMethod,
       razorpay_order_id: rzpOrder.id,
       customer_info,
