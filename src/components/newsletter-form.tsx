@@ -12,14 +12,14 @@ export function NewsletterForm() {
   };
 
   return (
-    <form className="flex flex-col sm:flex-row gap-4" onSubmit={handleSubmit}>
+    <form className="flex flex-col sm:flex-row gap-3" onSubmit={handleSubmit}>
       <input
         type="email"
-        placeholder="ENTER YOUR EMAIL"
-        className="flex-1 bg-transparent border-b border-background/30 px-0 py-3 text-background placeholder:text-background/50 focus:outline-none focus:border-background transition-colors uppercase tracking-widest text-sm"
+        placeholder="Enter your email address"
+        className="flex-1 bg-background border border-border px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground transition-colors tracking-wide"
         required
       />
-      <Button type="submit" variant="secondary" className="rounded-none uppercase tracking-widest">
+      <Button type="submit" className="rounded-none uppercase tracking-widest px-7 h-12 shrink-0">
         Subscribe
       </Button>
     </form>

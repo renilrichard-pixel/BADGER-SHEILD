@@ -1,138 +1,200 @@
+'use client';
+
+import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, RotateCcw, ShieldCheck, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { client } from '@/sanity/lib/client';
-import { urlForImage } from '@/sanity/lib/image';
 import { NewsletterForm } from '@/components/newsletter-form';
+import { client } from '@/sanity/lib/client';
+import { ProductCard } from '@/components/product-card';
+import type { SanityImageSource } from '@sanity/image-url';
+import { useEffect, useState } from 'react';
 
-export const revalidate = 0; // Disable static rendering for now to ensure fresh DB data
+interface HomeProduct {
+  _id: string;
+  name: string;
+  slug?: { current: string };
+  price: number;
+  salePrice?: number;
+  image?: SanityImageSource;
+  images?: SanityImageSource[];
+  categoryName?: string;
+  newArrival?: boolean;
+  bestSeller?: boolean;
+  colors?: string[];
+  colorHexes?: string[];
+  sizes?: string[];
+  stockQty?: number;
+}
 
-export default async function Home() {
-  const featuredProducts = await client.fetch(`
-    *[_type == "product" && featured == true][0...1] {
-      _id,
-      name,
-      slug,
-      price,
-      images
-    }
-  `);
-    
-  const newArrivals = await client.fetch(`
-    *[_type == "product" && newArrival == true] | order(_createdAt desc)[0...4] {
-      _id,
-      name,
-      slug,
-      price,
-      images
-    }
-  `);
+export default function Home() {
+  const [products, setProducts] = useState<HomeProduct[]>([]);
 
-  const featuredProduct = featuredProducts?.[0];
+  useEffect(() => {
+    client.fetch<HomeProduct[]>(`
+      *[_type == "product" && newArrival == true] | order(_createdAt desc)[0...8] {
+        _id, name, slug, price, salePrice, image, images,
+        newArrival, bestSeller,
+        "colors": colors[].name,
+        "colorHexes": colors[].hex,
+        "sizes": sizes,
+        "categoryName": category->name,
+        "stockQty": stock
+      }
+    `).then(data => {
+      if (data && data.length > 0) {
+        setProducts(data);
+      } else {
+        client.fetch<HomeProduct[]>(`
+          *[_type == "product" && active != false] | order(_createdAt desc)[0...8] {
+            _id, name, slug, price, salePrice, image, images,
+            newArrival, bestSeller,
+            "colors": colors[].name,
+            "colorHexes": colors[].hex,
+            "sizes": sizes,
+            "categoryName": category->name,
+            "stockQty": stock
+          }
+        `).then(setProducts);
+      }
+    });
+  }, []);
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <section className="relative h-[85vh] flex items-center justify-center overflow-hidden bg-foreground">
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2000&auto=format&fit=crop"
-            alt="Hero Fashion"
-            className="w-full h-full object-cover opacity-40 grayscale"
-          />
-        </div>
-        <div className="relative z-10 container mx-auto px-4 flex flex-col items-center text-center space-y-6">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tighter text-background uppercase">
-            Redefine <br /> Your Style
-          </h1>
-          <p className="text-lg md:text-xl text-background/80 max-w-[600px] font-light">
-            Minimalist luxury clothing designed for the modern individual. Embrace the elegance of simplicity.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <Button size="lg" variant="secondary" className="rounded-none uppercase tracking-widest px-8" render={<Link href="/products" />} nativeButton={false}>
-              Shop Collection
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-none uppercase tracking-widest px-8 text-background border-background hover:bg-background hover:text-foreground" render={<Link href="/products?sort=new" />} nativeButton={false}>
-              New Arrivals
-            </Button>
-          </div>
-        </div>
-      </section>
+    <main className="min-h-screen bg-background text-foreground">
 
-      {/* Featured Collection / Spotlight */}
-      {featuredProduct && (
-        <section className="py-24 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="aspect-[3/4] relative overflow-hidden group">
-                <img
-                  src={featuredProduct.images?.[0] ? urlForImage(featuredProduct.images[0]) : ''}
-                  alt={featuredProduct.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 grayscale"
-                />
-              </div>
-              <div className="space-y-6">
-                <h2 className="text-sm font-medium tracking-[0.2em] uppercase text-muted-foreground">Spotlight</h2>
-                <h3 className="text-4xl md:text-5xl font-bold tracking-tight uppercase">{featuredProduct.name}</h3>
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  Crafted from premium heavyweight cotton, this piece represents our commitment to uncompromising quality and timeless design. A staple for any considered wardrobe.
-                </p>
-                <div className="pt-6">
-                  <Button variant="default" size="lg" className="rounded-none uppercase tracking-widest w-full sm:w-auto" render={<Link href={`/products/${featuredProduct.slug?.current}`} />} nativeButton={false}>
-                    Discover Piece <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+      {/* ── Hero Section with Video Background ── */}
+      <section className="relative min-h-[60vh] flex items-center overflow-hidden">
+        {/* Video Background */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover object-center z-0"
+          poster="/hero-bg.png"
+        >
+          <source src="/The_hero_bg_image_you_have_rig.mp4" type="video/mp4" />
+        </video>
+
+
+
+        {/* Hero Content */}
+        <div className="relative z-10 container mx-auto max-w-7xl px-6 py-14 md:py-20 w-full">
+          <div className="max-w-2xl space-y-8">
+
+            {/* Eyebrow badge */}
+            <div className="inline-flex items-center border border-white/25 bg-white/10 backdrop-blur-md px-4 py-2 text-[10px] font-bold uppercase tracking-[0.28em] text-white/80">
+              <span className="mr-2 h-1.5 w-1.5 rounded-full bg-white/60 animate-pulse" />
+              Premium Menswear Essentials
+            </div>
+
+            {/* Headline */}
+            <div className="space-y-4">
+              <h1 className="text-4xl font-black uppercase leading-[0.93] tracking-tight text-white sm:text-5xl lg:text-6xl">
+                Modern<br />T-shirts<br />
+                <span className="italic font-light text-white/80">made for</span><br />
+                Everyday Style.
+              </h1>
+              <p className="max-w-md text-sm leading-7 text-white/65 sm:text-base">
+                Shop clean fits, heavyweight cotton, and sharp everyday pieces — built for a refined wardrobe.
+              </p>
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button
+                className="h-12 rounded-none bg-white px-8 text-[11px] font-black uppercase tracking-[0.2em] text-black hover:bg-white/90 transition-all"
+                render={<Link href="/products" />}
+                nativeButton={false}
+              >
+                Shop Collection <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 rounded-none border-white/50 bg-transparent px-8 text-[11px] font-black uppercase tracking-[0.2em] text-white hover:bg-white hover:text-black transition-all backdrop-blur-sm"
+                render={<Link href="#new-arrivals" />}
+                nativeButton={false}
+              >
+                New Arrivals
+              </Button>
+            </div>
+
+            {/* Trust badges */}
+            <div className="flex flex-wrap gap-6 border-t border-white/15 pt-6 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
+              <span className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Fast Ship</span>
+              <span className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> Secure Pay</span>
+              <span className="flex items-center gap-2"><RotateCcw className="h-3.5 w-3.5" /> Easy Return</span>
             </div>
           </div>
-        </section>
-      )}
+        </div>
 
-      {/* New Arrivals Grid */}
-      <section className="py-24 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-end mb-12">
-            <h2 className="text-3xl font-bold tracking-tighter uppercase">New Arrivals</h2>
-            <Link href="/products" className="text-sm font-medium uppercase tracking-widest hover:underline underline-offset-4 hidden sm:block">
-              View All
+
+      </section>
+
+      {/* ── New Arrivals Section ── */}
+      <section id="new-arrivals" className="py-16 md:py-24 scroll-mt-20">
+        <div className="container mx-auto max-w-7xl px-4">
+          <div className="mb-10 flex items-end justify-between gap-4 border-b border-border pb-6">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Latest products</p>
+              <h2 className="mt-2 text-2xl font-black uppercase tracking-tight sm:text-3xl">New Arrivals</h2>
+            </div>
+            <Link href="/products" className="hidden text-[11px] font-black uppercase tracking-[0.18em] underline-offset-4 hover:underline sm:inline-flex">
+              View all
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {newArrivals.map((product: any) => (
-              <Link key={product._id} href={`/products/${product.slug?.current}`} className="group block">
-                <div className="aspect-[4/5] relative overflow-hidden bg-muted mb-4">
-                  <img
-                    src={product.images?.[0] ? urlForImage(product.images[0]) : ''}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 grayscale group-hover:grayscale-0"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-background/90 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                    <p className="text-sm font-medium uppercase text-center">Quick View</p>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-medium text-lg leading-tight">{product.name}</h3>
-                  <p className="text-muted-foreground">₹{product.price.toLocaleString()}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-8 text-center sm:hidden">
-             <Button variant="outline" className="rounded-none uppercase tracking-widest w-full" render={<Link href="/products" />} nativeButton={false}>
-               View All
-             </Button>
+
+          {products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+              {products.slice(0, 8).map((product) => (
+                <ProductCard
+                  key={product._id}
+                  id={product._id}
+                  name={product.name}
+                  slug={product.slug?.current || ''}
+                  price={product.price}
+                  salePrice={product.salePrice}
+                  image={product.image}
+                  images={product.images}
+                  categoryName={product.categoryName}
+                  newArrival={product.newArrival}
+                  bestSeller={product.bestSeller}
+                  colors={product.colors}
+                  colorHexes={product.colorHexes}
+                  sizes={product.sizes}
+                  stockQty={product.stockQty}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="border border-dashed border-border py-16 text-center">
+              <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Products will appear here soon.</p>
+            </div>
+          )}
+
+          <div className="mt-9 sm:hidden">
+            <Button variant="outline" className="h-12 w-full rounded-none text-[11px] font-black uppercase tracking-[0.2em]" render={<Link href="/products" />} nativeButton={false}>
+              View all products
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Newsletter */}
-      <section className="py-24 bg-foreground text-background">
-        <div className="container mx-auto px-4 text-center max-w-2xl">
-          <h2 className="text-3xl font-bold tracking-tighter uppercase mb-4">Join The Club</h2>
-          <p className="text-background/70 mb-8">Subscribe to receive updates, access to exclusive deals, and more.</p>
-          <NewsletterForm />
+      {/* ── Newsletter Section ── */}
+      <section className="border-y border-border bg-muted/20 py-16 md:py-20">
+        <div className="container mx-auto max-w-3xl px-4 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-muted-foreground mb-3">Stay Updated</p>
+          <h2 className="text-3xl font-black uppercase tracking-tight sm:text-4xl mb-3">Join the Club</h2>
+          <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+            Get early access to new drops, exclusive offers, and style updates — straight to your inbox.
+          </p>
+          <div className="max-w-md mx-auto">
+            <NewsletterForm />
+          </div>
         </div>
       </section>
-    </div>
+
+    </main>
   );
 }

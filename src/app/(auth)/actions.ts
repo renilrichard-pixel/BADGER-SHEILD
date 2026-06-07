@@ -4,49 +4,61 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
+function normalizeEmail(value: FormDataEntryValue | null) {
+  return String(value || '').trim().toLowerCase()
+}
+
 export async function login(formData: FormData) {
   const supabase = await createClient()
+  const next = formData.get('next') as string || '/'
 
-  // type-casting here for convenience
-  // in practice, you should validate your inputs
   const data = {
-    email: formData.get('email') as string,
+    email: normalizeEmail(formData.get('email')),
     password: formData.get('password') as string,
   }
 
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    console.error('Login error:', error)
-    redirect(`/login?error=${encodeURIComponent(error.message || 'Could not authenticate user')}`)
+    redirect(`/login?error=${encodeURIComponent(error.message || 'Could not authenticate user')}&next=${encodeURIComponent(next)}`)
   }
 
   revalidatePath('/', 'layout')
-  redirect('/')
+  redirect(next)
 }
 
 export async function signup(formData: FormData) {
   const supabase = await createClient()
+  const next = formData.get('next') as string || '/'
+  const fullName = String(formData.get('fullName') || '').trim()
 
   const data = {
-    email: formData.get('email') as string,
+    email: normalizeEmail(formData.get('email')),
     password: formData.get('password') as string,
-    options: {
-      data: {
-        full_name: formData.get('fullName') as string,
-      }
-    }
   }
 
-  const { error } = await supabase.auth.signUp(data)
+  const { data: authData, error } = await supabase.auth.signUp(data)
 
   if (error) {
-    console.error('Signup error:', error)
-    redirect(`/register?error=${encodeURIComponent(error.message || 'Could not create user')}`)
+    redirect(`/register?error=${encodeURIComponent(error.message || 'Could not create user')}&next=${encodeURIComponent(next)}`)
   }
 
-  revalidatePath('/', 'layout')
-  redirect('/')
+  if (authData?.user) {
+    await supabase.from('users').insert({
+      id: authData.user.id,
+      display_name: fullName,
+      email: data.email,
+    });
+    
+    await supabase.from('profiles').insert({
+      id: authData.user.id,
+      display_name: fullName,
+      full_name: fullName,
+      email: data.email,
+    });
+  }
+
+  redirect(`/login?message=${encodeURIComponent('Registration successful! Please check your email to confirm your account before logging in.')}&next=${encodeURIComponent(next)}`)
 }
 
 export async function logout() {

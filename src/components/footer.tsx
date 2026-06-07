@@ -1,8 +1,14 @@
 import Link from 'next/link';
 import { client } from '@/sanity/lib/client';
 
+interface FooterCategory {
+  _id: string;
+  name: string;
+  slug?: { current: string };
+}
+
 export async function Footer() {
-  const categories = await client.fetch(`*[_type == "category"] | order(displayOrder asc)`);
+  const categories = await client.fetch<FooterCategory[]>(`*[_type == "category"] | order(displayOrder asc)`);
 
   return (
     <footer className="bg-background border-t border-border mt-auto">
@@ -18,7 +24,7 @@ export async function Footer() {
           <div>
             <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm">Shop</h4>
             <ul className="space-y-2">
-              {categories.map((category: any) => (
+              {categories.map((category) => (
                 <li key={category._id}>
                   <Link href={`/products?category=${category.slug?.current}`} className="text-muted-foreground hover:text-foreground text-sm transition-colors">
                     {category.name}

@@ -12,3 +12,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+// Force dev server reload to pick up nodemailer
+

@@ -24,7 +24,7 @@ export default function AdminLayout({
             <Package className="w-4 h-4" /> Products
           </Link>
           <Link href="/admin/orders" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors">
-            <ShoppingCart className="w-4 h-4" /> Orders
+            <ShoppingCart className="w-4 h-4" /> Orders``
           </Link>
           <Link href="/admin/users" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors">
             <Users className="w-4 h-4" /> Users
