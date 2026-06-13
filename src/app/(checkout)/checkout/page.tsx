@@ -264,7 +264,7 @@ export default function CheckoutPage() {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       amount: rzpOrder.amount,
       currency: rzpOrder.currency ?? 'INR',
-      name: 'BADGER SHIELD',
+      name: 'BADGER SHEILD',
       description: `Order ${orderId}`,
       order_id: rzpOrder.id,
       prefill: {

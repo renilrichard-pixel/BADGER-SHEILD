@@ -37,7 +37,7 @@ export async function Navbar() {
             className="flex items-center space-x-2 transition-all duration-300 hover:opacity-80 hover:scale-[1.02] active:scale-[0.98] origin-left"
           >
             <span className="font-extrabold text-2xl md:text-[25px] tracking-[0.12em] uppercase">
-              <span className="hidden sm:inline">BADGER SHIELD</span>
+              <span className="hidden sm:inline">BADGER SHEILD</span>
               <span className="sm:hidden tracking-[0.15em]">BS.</span>
             </span>
           </Link>

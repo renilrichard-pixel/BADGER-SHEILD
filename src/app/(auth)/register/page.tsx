@@ -12,7 +12,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         <section className="flex items-center px-6 py-10 sm:px-10 lg:px-12">
           <div className="mx-auto w-full max-w-sm">
             <div className="mb-10 lg:hidden">
-              <Link href="/" className="text-sm font-black uppercase tracking-[0.28em]">Badger Shield</Link>
+              <Link href="/" className="text-sm font-black uppercase tracking-[0.28em]">Badger Sheild</Link>
             </div>
 
             <div className="mb-8 space-y-4">
@@ -99,7 +99,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
               <span className="flex h-12 w-12 items-center justify-center border border-white/25 bg-white text-xl font-black text-[#151311]">B</span>
               <span className="leading-none">
                 <span className="block text-sm font-black uppercase tracking-[0.28em]">Badger</span>
-                <span className="block text-sm font-black uppercase tracking-[0.28em]">Shield</span>
+                <span className="block text-sm font-black uppercase tracking-[0.28em]">Sheild</span>
               </span>
             </Link>
             <span className="border border-white/15 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/65">Premium tees</span>

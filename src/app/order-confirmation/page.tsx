@@ -91,7 +91,7 @@ export default function OrderConfirmationPage() {
 </head>
 <body>
   <div class="header">
-    <h1>BADGER SHIELD</h1>
+    <h1>BADGER SHEILD</h1>
     <p>Tax Invoice</p>
   </div>
 
@@ -149,7 +149,7 @@ export default function OrderConfirmationPage() {
   </div>
 
   <div class="footer">
-    <p>Thank you for shopping with BADGER SHIELD.</p>
+    <p>Thank you for shopping with BADGER SHEILD.</p>
     <p style="margin-top:4px;">This is a computer-generated invoice and requires no signature.</p>
   </div>
 </body>

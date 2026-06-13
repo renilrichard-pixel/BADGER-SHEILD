@@ -15,7 +15,7 @@ export async function Footer() {
       <div className="container mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div className="space-y-4">
-            <h3 className="font-bold text-xl tracking-tighter uppercase">BADGER SHIELD</h3>
+            <h3 className="font-bold text-xl tracking-tighter uppercase">BADGER SHEILD</h3>
             <p className="text-muted-foreground text-sm max-w-xs">
               Minimalist luxury clothing designed for the modern individual. Quality over quantity.
             </p>
@@ -49,7 +49,7 @@ export async function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
               <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/refund" className="hover:text-foreground transition-colors">Refund Policy</Link></li>
+              <li><Link href="/returns" className="hover:text-foreground transition-colors">Returns</Link></li>
             </ul>
           </div>
 
@@ -58,7 +58,7 @@ export async function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a
-                  href="https://www.instagram.com/badger_shield?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                  href="https://www.instagram.com/badger_sheild/?utm_source=ig_web_button_share_sheet"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 hover:text-foreground transition-colors"
@@ -132,7 +132,7 @@ export async function Footer() {
         
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} BADGER SHIELD. All rights reserved.
+            &copy; {new Date().getFullYear()} BADGER SHEILD. All rights reserved.
           </p>
           <div className="flex gap-4">
             <span className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Instagram</span>

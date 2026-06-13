@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <span className="flex h-12 w-12 items-center justify-center border border-white/25 bg-white text-xl font-black text-[#151311]">B</span>
               <span className="leading-none">
                 <span className="block text-sm font-black uppercase tracking-[0.28em]">Badger</span>
-                <span className="block text-sm font-black uppercase tracking-[0.28em]">Shield</span>
+                <span className="block text-sm font-black uppercase tracking-[0.28em]">Sheild</span>
               </span>
             </Link>
             <span className="border border-white/15 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/65">Menswear</span>
@@ -48,7 +48,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <section className="flex items-center px-6 py-10 sm:px-10 lg:px-12">
           <div className="mx-auto w-full max-w-sm">
             <div className="mb-10 lg:hidden">
-              <Link href="/" className="text-sm font-black uppercase tracking-[0.28em]">Badger Shield</Link>
+              <Link href="/" className="text-sm font-black uppercase tracking-[0.28em]">Badger Sheild</Link>
             </div>
 
             <div className="mb-8 space-y-4">
@@ -59,7 +59,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <div className="space-y-3">
                 <h2 className="text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">Sign in</h2>
                 <p className="max-w-sm text-sm leading-6 text-[#5f5850]">
-                  Access your bag, wishlist, and new tee drops from the Badger Shield collection.
+                  Access your bag, wishlist, and new tee drops from the Badger Sheild collection.
                 </p>
               </div>
             </div>
@@ -112,7 +112,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </form>
 
             <div className="mt-8 flex flex-col gap-3 border-t border-[#171412]/10 pt-6 text-xs text-[#5f5850] sm:flex-row sm:items-center sm:justify-between">
-              <span>New to Badger Shield?</span>
+              <span>New to Badger Sheild?</span>
               <Link href={params?.next ? `/register?next=${encodeURIComponent(params.next)}` : '/register'} className="inline-flex items-center gap-2 font-black uppercase tracking-[0.16em] text-[#171412] hover:underline underline-offset-4">
                 Create account <Sparkles className="h-3.5 w-3.5" />
               </Link>

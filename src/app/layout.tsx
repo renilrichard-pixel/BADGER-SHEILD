@@ -11,7 +11,7 @@ import { RatingsProvider } from "@/context/RatingsContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "BADGER SHIELD | Luxury Clothing",
+  title: "BADGER SHEILD | Luxury Clothing",
   description: "Minimalist luxury t-shirts and clothing.",
 };
 

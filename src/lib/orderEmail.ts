@@ -74,7 +74,7 @@ export async function sendOrderEmails({ order, email }: { order: any; email?: st
   // ── Customer email ────────────────────────────────────────────────────────
   const customerHtml = `
   <div style="font-family:'Times New Roman',serif;color:#111;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;padding:48px 40px;">
-    <h1 style="font-size:30px;letter-spacing:-1px;text-align:center;margin:0 0 4px;">BADGER SHIELD</h1>
+    <h1 style="font-size:30px;letter-spacing:-1px;text-align:center;margin:0 0 4px;">BADGER SHEILD</h1>
     <p style="text-align:center;font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#888;margin:0 0 40px;">Order Confirmed</p>
 
     <h2 style="font-size:18px;font-weight:normal;border-bottom:1px solid #111;padding-bottom:10px;margin-bottom:16px;">
@@ -120,7 +120,7 @@ export async function sendOrderEmails({ order, email }: { order: any; email?: st
     </div>
 
     <p style="font-size:12px;color:#aaa;text-align:center;margin-top:40px;">
-      &copy; ${new Date().getFullYear()} BADGER SHIELD. All rights reserved.
+      &copy; ${new Date().getFullYear()} BADGER SHEILD. All rights reserved.
     </p>
   </div>`;
 
@@ -166,7 +166,7 @@ export async function sendOrderEmails({ order, email }: { order: any; email?: st
   if (isValidEmail(customerEmail)) {
     try {
       await transporter.sendMail({
-        from: `"BADGER SHIELD" <${process.env.SMTP_FROM_EMAIL}>`,
+        from: `"BADGER SHEILD" <${process.env.SMTP_FROM_EMAIL}>`,
         to: customerEmail,
         subject: `Order Confirmed — #${orderId}`,
         html: customerHtml,
@@ -180,7 +180,7 @@ export async function sendOrderEmails({ order, email }: { order: any; email?: st
   if (adminEmail) {
     try {
       await transporter.sendMail({
-        from: `"BADGER SHIELD System" <${process.env.SMTP_FROM_EMAIL}>`,
+        from: `"BADGER SHEILD System" <${process.env.SMTP_FROM_EMAIL}>`,
         to: adminEmail,
         subject: `NEW ORDER #${orderId} — ${money(o.total)} from ${firstName}`,
         html: adminHtml,
