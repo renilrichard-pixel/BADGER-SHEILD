@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Minus, Plus, ShoppingBag, Heart, Ruler,
@@ -237,11 +238,14 @@ export default function ProductClient({ product }: { product: Product }) {
               onMouseLeave={() => setIsZoomed(false)}
             >
               {images[activeImageIndex] ? (
-                <img
-                  src={images[activeImageIndex]}
-                  alt={product.name}
+                <Image
+                  src={images[activeImageIndex] || ''}
+                  alt={product.name || ''}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 40vw, 420px"
                   className="w-full h-full object-cover transition-transform duration-700"
                   style={isZoomed ? { transform: 'scale(2)', transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` } : {}}
+                  priority
                 />
               ) : (
                 <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -275,12 +279,18 @@ export default function ProductClient({ product }: { product: Product }) {
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`aspect-square bg-muted overflow-hidden border transition-all ${activeImageIndex === idx
+                    className={`aspect-square bg-muted overflow-hidden border transition-all relative ${activeImageIndex === idx
                         ? 'border-foreground'
                         : 'border-transparent opacity-50 hover:opacity-80'
                       }`}
                   >
-                    <img src={img} alt={`view-${idx + 1}`} className="w-full h-full object-cover" />
+                    <Image
+                      src={img}
+                      alt={`view-${idx + 1}`}
+                      fill
+                      sizes="80px"
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -807,9 +817,11 @@ export default function ProductClient({ product }: { product: Product }) {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             {avatarUrl ? (
-                              <img
+                              <Image
                                 src={avatarUrl}
                                 alt={profileName}
+                                width={32}
+                                height={32}
                                 className="w-8 h-8 rounded-full object-cover border border-border/60"
                               />
                             ) : (

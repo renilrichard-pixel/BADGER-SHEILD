@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 import { Plus, Search, Edit, Trash, Package } from "lucide-react";
 import { client } from "@/sanity/lib/client";
 import { urlForImage } from "@/sanity/lib/image";
@@ -78,9 +79,9 @@ export default async function AdminProducts() {
                 <tr key={product._id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-16 bg-muted shrink-0">
+                      <div className="w-12 h-16 bg-muted shrink-0 relative">
                         {resolvedImageUrl ? (
-                          <img src={resolvedImageUrl} alt={product.name} className="w-full h-full object-cover grayscale" />
+                          <Image src={resolvedImageUrl} alt={product.name} fill sizes="48px" className="w-full h-full object-cover grayscale" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-muted">
                             <Package className="w-6 h-6 text-muted-foreground/30" />

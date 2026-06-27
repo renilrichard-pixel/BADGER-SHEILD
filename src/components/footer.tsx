@@ -8,7 +8,7 @@ interface FooterCategory {
 }
 
 export async function Footer() {
-  const categories = await client.fetch<FooterCategory[]>(`*[_type == "category"] | order(displayOrder asc)`);
+  const categories = await client.fetch<FooterCategory[]>(`*[_type == "category" && slug.current != "joggers"] | order(displayOrder asc)`);
 
   return (
     <footer className="bg-background border-t border-border mt-auto">
@@ -38,7 +38,6 @@ export async function Footer() {
             <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm">Support</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link></li>
-              <li><Link href="/shipping" className="hover:text-foreground transition-colors">Shipping & Returns</Link></li>
               <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact Us</Link></li>
               <li><Link href="/size-guide" className="hover:text-foreground transition-colors">Size Guide</Link></li>
             </ul>
@@ -49,7 +48,7 @@ export async function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
               <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/returns" className="hover:text-foreground transition-colors">Returns</Link></li>
+              <li><Link href="/returns" className="hover:text-foreground transition-colors">Return Policy</Link></li>
             </ul>
           </div>
 
@@ -82,29 +81,10 @@ export async function Footer() {
                   <span>Instagram</span>
                 </a>
               </li>
+
               <li>
                 <a
-                  href="#"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 hover:text-foreground transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                  <span>X (Twitter)</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
+                  href="https://www.facebook.com/share/1Crw5v8Pn8/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 hover:text-foreground transition-colors"

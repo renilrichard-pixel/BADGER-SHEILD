@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 
 function normalizeEmail(value: FormDataEntryValue | null) {
@@ -67,4 +68,45 @@ export async function logout() {
   
   revalidatePath('/', 'layout')
   redirect('/')
+}
+
+export async function forgotPassword(formData: FormData) {
+  const supabase = await createClient()
+  const email = normalizeEmail(formData.get('email'))
+
+  if (!email) {
+    redirect(`/forgot-password?error=${encodeURIComponent('Email is required')}`)
+  }
+
+  const host = (await headers()).get('host')
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+  const origin = `${protocol}://${host}`
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/api/auth/callback?next=/reset-password`,
+  })
+
+  if (error) {
+    redirect(`/forgot-password?error=${encodeURIComponent(error.message || 'Could not send reset link')}`)
+  }
+
+  redirect(`/forgot-password?message=${encodeURIComponent('Check your email for password recovery instructions.')}`)
+}
+
+export async function resetPassword(formData: FormData) {
+  const supabase = await createClient()
+  const password = formData.get('password') as string
+
+  if (!password) {
+    redirect(`/reset-password?error=${encodeURIComponent('Password is required')}`)
+  }
+
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    redirect(`/reset-password?error=${encodeURIComponent(error.message || 'Could not update password')}`)
+  }
+
+  await supabase.auth.signOut()
+  redirect(`/login?message=${encodeURIComponent('Password updated successfully. Please log in.')}`)
 }

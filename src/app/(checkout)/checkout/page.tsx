@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Lock, MapPin, CreditCard, RotateCcw, Package } from 'lucide-react';
@@ -490,7 +491,13 @@ export default function CheckoutPage() {
                     <div key={item.cartId} className="flex gap-3">
                       <div className="w-14 h-18 bg-muted flex-shrink-0 relative overflow-hidden" style={{ minHeight: '3.5rem' }}>
                         {item.image
-                          ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          ? <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              sizes="56px"
+                              className="w-full h-full object-cover"
+                            />
                           : <Package className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground/30" />
                         }
                         <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-foreground text-background rounded-full text-[9px] font-black flex items-center justify-center">

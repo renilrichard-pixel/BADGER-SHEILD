@@ -10,7 +10,7 @@ export async function Navbar() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const categories = await client.fetch(
-    `*[_type == "category"] | order(displayOrder asc)`,
+    `*[_type == "category" && slug.current != "joggers"] | order(displayOrder asc)`,
     {},
     {
       useCdn: false,

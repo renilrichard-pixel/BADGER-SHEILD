@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -504,9 +505,15 @@ export default function ProfilePage() {
               {/* Avatar Section */}
               <div className="flex flex-col sm:flex-row items-center gap-6 p-6 border border-border/50 bg-muted/10">
                 <div className="relative w-20 h-20 shrink-0">
-                  <div className="w-full h-full rounded-full border border-border overflow-hidden bg-muted flex items-center justify-center">
+                  <div className="w-full h-full rounded-full border border-border overflow-hidden bg-muted flex items-center justify-center relative">
                     {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      <Image
+                        src={avatarUrl}
+                        alt="Avatar"
+                        fill
+                        sizes="80px"
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <UserIcon size={28} className="text-muted-foreground/50" />
                     )}
@@ -679,7 +686,7 @@ export default function ProfilePage() {
                 <div className="text-center py-16 border border-dashed border-border bg-muted/5">
                   <MapPin size={40} className="mx-auto mb-4 opacity-20" />
                   <p className="text-xs uppercase tracking-widest font-bold mb-1">No Saved Addresses</p>
-                  <p className="text-[11px] text-muted-foreground mb-6">Add an address for a faster checkout checkout flow.</p>
+                  <p className="text-[11px] text-muted-foreground mb-6">Add an address for a faster checkout flow.</p>
                   <Button
                     onClick={() => setIsAddingAddress(true)}
                     className="rounded-none uppercase tracking-widest text-[10px] font-bold h-11 px-6 cursor-pointer"
@@ -889,13 +896,19 @@ export default function ProfilePage() {
                                 <h4 className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground mb-4 pb-2 border-b border-border/40">Purchased Items</h4>
                                 {Array.isArray(order.items) ? order.items.map((item: any, idx: number) => (
                                   <Link key={idx} href={`/products/${item.slug || item.id}`} className="flex gap-4 items-center group cursor-pointer">
-                                    <div className="w-14 h-18 bg-muted border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                                      {item.image ? (
-                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                      ) : (
-                                        <span className="opacity-15 text-lg uppercase font-bold">{item.name?.charAt(0)}</span>
-                                      )}
-                                    </div>
+                                    <div className="w-14 h-18 bg-muted border border-border flex items-center justify-center shrink-0 overflow-hidden relative">
+                                        {item.image ? (
+                                          <Image
+                                            src={item.image}
+                                            alt={item.name}
+                                            fill
+                                            sizes="56px"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                          />
+                                        ) : (
+                                          <span className="opacity-15 text-lg uppercase font-bold">{item.name?.charAt(0)}</span>
+                                        )}
+                                      </div>
                                     <div className="flex-1 min-w-0">
                                       <h4 className="font-semibold text-sm truncate group-hover:underline">{item.name}</h4>
                                       {(item.selectedSize || item.selectedColor) && (

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ProductControls } from '@/components/product-controls';
 import { ProductCard } from '@/components/product-card';
 import type { SanityImageSource } from '@sanity/image-url';
+import { notFound } from 'next/navigation';
 export const revalidate = 0;
 
 export default async function ProductsPage({
@@ -13,7 +14,11 @@ export default async function ProductsPage({
 }) {
   const { category, q, sort } = await searchParams;
 
-  let productsQuery = `*[_type == "product" && active != false`;
+  if (category === 'joggers') {
+    notFound();
+  }
+
+  let productsQuery = `*[_type == "product" && active != false && category->slug.current != "joggers"`;
   const queryParams: Record<string, string> = {};
 
   if (category) {

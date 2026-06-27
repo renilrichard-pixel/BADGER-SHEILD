@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { ArrowRight, LockKeyhole, Quote, Shirt, Sparkles } from 'lucide-react';
+import { ArrowRight, KeyRound, Quote, Shirt, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { login } from '../actions';
+import { forgotPassword } from '../actions';
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; next?: string }> }) {
+export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
   const params = await searchParams;
-  
+
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-muted/20 p-4 text-[#171412] sm:p-8">
       <div className="mx-auto grid w-full max-w-5xl overflow-hidden border border-border/10 bg-background shadow-2xl md:min-h-[620px] lg:w-[72%] lg:grid-cols-[1.08fr_0.92fr]">
@@ -53,18 +53,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
             <div className="mb-8 space-y-4">
               <div className="inline-flex items-center gap-2 border border-[#171412]/15 bg-white/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em]">
-                <LockKeyhole className="h-3.5 w-3.5" />
-                Member access
+                <KeyRound className="h-3.5 w-3.5" />
+                Password recovery
               </div>
               <div className="space-y-3">
-                <h2 className="text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">Sign in</h2>
+                <h2 className="text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">Recover</h2>
                 <p className="max-w-sm text-sm leading-6 text-[#5f5850]">
-                  Access your bag, wishlist, and new tee drops from the Badger Sheild collection.
+                  Enter your email address and we will send you a link to reset your password.
                 </p>
               </div>
             </div>
 
-            <form className="space-y-5" action={login}>
+            <form className="space-y-5" action={forgotPassword}>
               {params?.message && (
                 <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800">
                   {params.message}
@@ -75,8 +75,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                   {params.error}
                 </div>
               )}
-
-              <input type="hidden" name="next" value={params?.next || ''} />
 
               <label className="block space-y-2" htmlFor="email">
                 <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">Email address</span>
@@ -93,37 +91,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 />
               </label>
 
-              <label className="block space-y-2" htmlFor="password">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">Password</span>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="h-12 w-full border border-[#171412]/15 bg-white px-4 text-sm outline-none transition-colors placeholder:text-[#9c9287] focus:border-[#171412]"
-                  placeholder="Enter password"
-                />
-              </label>
-
-              <div className="flex justify-end mt-1">
-                <Link
-                  href="/forgot-password"
-                  className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#5f5850] hover:text-[#171412] hover:underline underline-offset-4"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
-
               <Button type="submit" className="h-12 w-full rounded-none bg-[#171412] text-[11px] font-black uppercase tracking-[0.24em] text-white hover:bg-[#2b2520]">
-                Sign in <ArrowRight className="ml-2 h-4 w-4" />
+                SEND RESET LINK <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </form>
 
             <div className="mt-8 flex flex-col gap-3 border-t border-[#171412]/10 pt-6 text-xs text-[#5f5850] sm:flex-row sm:items-center sm:justify-between">
-              <span>New to Badger Sheild?</span>
-              <Link href={params?.next ? `/register?next=${encodeURIComponent(params.next)}` : '/register'} className="inline-flex items-center gap-2 font-black uppercase tracking-[0.16em] text-[#171412] hover:underline underline-offset-4">
-                Create account <Sparkles className="h-3.5 w-3.5" />
+              <span>Remember your password?</span>
+              <Link href="/login" className="inline-flex items-center gap-2 font-black uppercase tracking-[0.16em] text-[#171412] hover:underline underline-offset-4">
+                Sign in <Sparkles className="h-3.5 w-3.5" />
               </Link>
             </div>
           </div>

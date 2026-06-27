@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useWishlist } from '@/lib/hooks/use-wishlist';
 import { useCart } from '@/lib/hooks/use-cart';
@@ -161,9 +162,11 @@ export default function WishlistPage() {
                     className="block w-20 h-28 sm:w-28 sm:h-36 md:w-32 md:h-40 bg-muted shrink-0 relative overflow-hidden"
                   >
                     {item.image ? (
-                      <img
+                      <Image
                         src={item.image}
                         alt={item.name}
+                        fill
+                        sizes="(max-width: 640px) 80px, (max-width: 768px) 112px, 128px"
                         className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                       />
                     ) : (

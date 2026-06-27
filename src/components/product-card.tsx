@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { WishlistButton } from '@/components/wishlist-button';
 import { QuickAdd } from '@/components/quick-add';
@@ -71,11 +72,12 @@ export function ProductCard({
         <div className="relative mb-3 aspect-[4/5] overflow-hidden bg-muted group/image border border-border/10">
           <Link href={`/products/${slug}`} className="block w-full h-full">
             {mainImageUrl ? (
-              <img
+              <Image
                 src={mainImageUrl}
                 alt={name}
+                fill
+                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                loading="lazy"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -85,12 +87,13 @@ export function ProductCard({
 
             {/* Hover secondary image */}
             {hoverImageUrl && (
-              <img
+              <Image
                 src={hoverImageUrl}
                 alt=""
                 aria-hidden
+                fill
+                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                loading="lazy"
               />
             )}
 

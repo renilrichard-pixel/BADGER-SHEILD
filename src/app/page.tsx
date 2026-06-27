@@ -32,7 +32,7 @@ export default function Home() {
 
   useEffect(() => {
     client.fetch<HomeProduct[]>(`
-      *[_type == "product" && newArrival == true] | order(_createdAt desc)[0...8] {
+      *[_type == "product" && newArrival == true && category->slug.current != "joggers"] | order(_createdAt desc)[0...8] {
         _id, name, slug, price, salePrice, image, images,
         newArrival, bestSeller,
         "colors": colors[].name,
@@ -46,7 +46,7 @@ export default function Home() {
         setProducts(data);
       } else {
         client.fetch<HomeProduct[]>(`
-          *[_type == "product" && active != false] | order(_createdAt desc)[0...8] {
+          *[_type == "product" && active != false && category->slug.current != "joggers"] | order(_createdAt desc)[0...8] {
             _id, name, slug, price, salePrice, image, images,
             newArrival, bestSeller,
             "colors": colors[].name,
