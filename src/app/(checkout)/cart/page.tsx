@@ -57,23 +57,7 @@ export default function CartPage() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="container mx-auto px-4 py-24 md:py-32 max-w-md text-center">
-        <h1 className="text-2xl font-bold uppercase tracking-wider mb-4">Exclusive Access</h1>
-        <p className="text-muted-foreground text-sm mb-8">
-          Please sign in to view your reserved pieces.
-        </p>
-        <Button 
-          size="lg" 
-          className="w-full rounded-none uppercase tracking-widest h-14" 
-          onClick={() => router.push('/login?next=/cart')}
-        >
-          Authenticate
-        </Button>
-      </div>
-    );
-  }
+
 
   if (items.length === 0) {
     return (

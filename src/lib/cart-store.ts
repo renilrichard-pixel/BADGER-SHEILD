@@ -16,6 +16,10 @@ export interface CartItem {
 let listeners: (() => void)[] = [];
 let memoryCart: CartItem[] = [];
 let initialized = false;
+let state: 'uninitialized' | 'guest' | 'authenticated' | 'transitioning' = 'uninitialized';
+
+const GUEST_CART_KEY = 'badger_shield_guest_cart';
+let lastSavedCartJson = '';
 
 function notify() {
   listeners.forEach(l => l());
@@ -23,6 +27,52 @@ function notify() {
 
 let isSyncing = false;
 let needsSync = false;
+
+function isValidCartItem(item: any): item is CartItem {
+  return (
+    item &&
+    typeof item.cartId === 'string' &&
+    typeof item.productId === 'string' &&
+    typeof item.name === 'string' &&
+    typeof item.slug === 'string' &&
+    typeof item.price === 'number' &&
+    typeof item.quantity === 'number' &&
+    typeof item.selectedSize === 'string' &&
+    typeof item.selectedColor === 'string' &&
+    typeof item.image === 'string' &&
+    (item.selected === undefined || typeof item.selected === 'boolean')
+  );
+}
+
+function loadGuestCartFromLocalStorage(): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem(GUEST_CART_KEY);
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(isValidCartItem);
+    }
+  } catch (err) {
+    console.error('Error loading guest cart from localStorage:', err);
+    try {
+      localStorage.removeItem(GUEST_CART_KEY);
+    } catch (_) {}
+  }
+  return [];
+}
+
+function saveGuestCartToLocalStorage(cart: CartItem[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    const json = JSON.stringify(cart);
+    if (json === lastSavedCartJson) return;
+    localStorage.setItem(GUEST_CART_KEY, json);
+    lastSavedCartJson = json;
+  } catch (err) {
+    console.error('Error saving guest cart to localStorage:', err);
+  }
+}
 
 async function syncToSupabase(cart: CartItem[]) {
   if (typeof window === 'undefined') return;
@@ -82,88 +132,119 @@ export const cartStore = {
 
     const currentUserId = user?.id || null;
 
-    if (currentUserId !== lastUserId) {
-      lastUserId = currentUserId;
-      initialized = false;
-      notify();
+    // Defer transition logic execution to the end of the microtask queue
+    queueMicrotask(async () => {
+      if (currentUserId !== lastUserId || state === 'uninitialized') {
+        const wasGuest = lastUserId === null;
+        const isAuthed = currentUserId !== null;
+        const transitioningToAuthed = wasGuest && isAuthed;
 
-      if (currentUserId) {
-        if (isFetching) return;
-        isFetching = true;
-        try {
-          const supabase = createClient();
-          const { data, error } = await supabase
-            .from('carts')
-            .select('*')
-            .eq('user_id', currentUserId);
+        lastUserId = currentUserId;
+        state = 'transitioning';
+        initialized = false;
+        notify();
 
-          if (error) throw error;
+        if (currentUserId) {
+          if (isFetching) return;
+          isFetching = true;
+          const preMergeGuestCart = loadGuestCartFromLocalStorage();
+          try {
+            const supabase = createClient();
+            const { data, error } = await supabase
+              .from('carts')
+              .select('*')
+              .eq('user_id', currentUserId);
 
-          const dbCart: CartItem[] = [];
-          if (data && data.length > 0) {
-            data.forEach(d => {
-              const existing = dbCart.find(i => i.cartId === d.cart_id);
-              if (existing) {
-                existing.quantity += d.quantity;
-              } else {
-                dbCart.push({
-                  cartId: d.cart_id,
-                  productId: d.product_id,
-                  name: d.name,
-                  slug: d.slug,
-                  price: Number(d.price),
-                  quantity: d.quantity,
-                  selectedSize: d.selected_size,
-                  selectedColor: d.selected_color,
-                  image: d.image,
-                  selected: true,
-                });
-              }
-            });
-          }
+            if (error) throw error;
 
-          // Merge guest memoryCart into dbCart
-          const merged = [...dbCart];
-          memoryCart.forEach(localItem => {
-            const existing = merged.find(i => i.cartId === localItem.cartId);
-            if (existing) {
-              existing.quantity = Number(existing.quantity) + Number(localItem.quantity);
-            } else {
-              merged.push(localItem);
+            const dbCart: CartItem[] = [];
+            if (data && data.length > 0) {
+              data.forEach(d => {
+                const existing = dbCart.find(i => i.cartId === d.cart_id);
+                if (existing) {
+                  existing.quantity += d.quantity;
+                } else {
+                  dbCart.push({
+                    cartId: d.cart_id,
+                    productId: d.product_id,
+                    name: d.name,
+                    slug: d.slug,
+                    price: Number(d.price),
+                    quantity: d.quantity,
+                    selectedSize: d.selected_size,
+                    selectedColor: d.selected_color,
+                    image: d.image,
+                    selected: true,
+                  });
+                }
+              });
             }
-          });
 
-          memoryCart = merged;
-          initialized = true;
-          notify();
+            const guestCart = transitioningToAuthed ? preMergeGuestCart : [];
+            const hasGuestItems = guestCart.length > 0;
 
-          // Sync merged cart back to Supabase
-          if (memoryCart.length > 0) {
-            await syncToSupabase(memoryCart);
+            const merged = [...dbCart];
+            if (transitioningToAuthed && hasGuestItems) {
+              guestCart.forEach(localItem => {
+                const existing = merged.find(i => i.cartId === localItem.cartId);
+                if (existing) {
+                  existing.quantity = Number(existing.quantity) + Number(localItem.quantity);
+                } else {
+                  merged.push(localItem);
+                }
+              });
+            }
+
+            memoryCart = merged;
+            state = 'authenticated';
+            initialized = true;
+            notify();
+
+            // Sync merged cart back to Supabase
+            if (memoryCart.length > 0) {
+              await syncToSupabase(memoryCart);
+            }
+
+            // Immediately remove the guest cart from localStorage after successful merge
+            if (transitioningToAuthed && hasGuestItems) {
+              try {
+                localStorage.removeItem(GUEST_CART_KEY);
+                lastSavedCartJson = '';
+              } catch (err) {
+                console.error('Error removing guest cart from localStorage:', err);
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching/merging cart in handleAuthChange:', err);
+            // Rollback on failure:
+            if (transitioningToAuthed) {
+              memoryCart = preMergeGuestCart;
+              state = 'guest';
+              lastUserId = null;
+            } else {
+              memoryCart = [];
+              state = 'authenticated';
+            }
+            initialized = true;
+            notify();
+          } finally {
+            isFetching = false;
           }
-        } catch (err) {
-          console.error('Error fetching cart in handleAuthChange:', err);
+        } else {
+          // User logged out
+          memoryCart = loadGuestCartFromLocalStorage();
+          lastSavedCartJson = JSON.stringify(memoryCart);
+          state = 'guest';
           initialized = true;
           notify();
-        } finally {
-          isFetching = false;
         }
-      } else {
-        // User logged out
-        memoryCart = [];
-        initialized = true;
-        notify();
       }
-    } else {
-      if (!initialized) {
-        initialized = true;
-        notify();
-      }
-    }
+    });
   },
 
   addItem(item: Omit<CartItem, 'cartId'>) {
-    if (!initialized) {
+    if (state === 'uninitialized' || state === 'transitioning') {
+      state = lastUserId ? 'authenticated' : 'guest';
       initialized = true;
     }
     const cartId = `${item.productId}-${item.selectedSize}-${item.selectedColor}`;
@@ -174,7 +255,12 @@ export const cartStore = {
       memoryCart.push({ ...item, cartId, quantity: Number(item.quantity), selected: true });
     }
     notify();
-    return syncToSupabase(memoryCart);
+    if (lastUserId) {
+      return syncToSupabase(memoryCart);
+    } else {
+      saveGuestCartToLocalStorage(memoryCart);
+      return Promise.resolve();
+    }
   },
 
   updateQuantity(cartId: string, quantity: number) {
@@ -182,7 +268,12 @@ export const cartStore = {
     if (existing) {
       existing.quantity = Math.max(1, Number(quantity));
       notify();
-      return syncToSupabase(memoryCart);
+      if (lastUserId) {
+        return syncToSupabase(memoryCart);
+      } else {
+        saveGuestCartToLocalStorage(memoryCart);
+        return Promise.resolve();
+      }
     }
     return Promise.resolve();
   },
@@ -190,13 +281,23 @@ export const cartStore = {
   removeItem(cartId: string) {
     memoryCart = [...memoryCart.filter(i => i.cartId !== cartId)];
     notify();
-    return syncToSupabase(memoryCart);
+    if (lastUserId) {
+      return syncToSupabase(memoryCart);
+    } else {
+      saveGuestCartToLocalStorage(memoryCart);
+      return Promise.resolve();
+    }
   },
 
   removeMultiple(cartIds: string[]) {
     memoryCart = [...memoryCart.filter(i => !cartIds.includes(i.cartId))];
     notify();
-    return syncToSupabase(memoryCart);
+    if (lastUserId) {
+      return syncToSupabase(memoryCart);
+    } else {
+      saveGuestCartToLocalStorage(memoryCart);
+      return Promise.resolve();
+    }
   },
 
   toggleSelection(cartId: string) {
@@ -204,6 +305,9 @@ export const cartStore = {
     if (existing) {
       existing.selected = existing.selected === false ? true : false;
       notify();
+      if (!lastUserId) {
+        saveGuestCartToLocalStorage(memoryCart);
+      }
     }
   },
 
@@ -211,7 +315,12 @@ export const cartStore = {
     memoryCart = [];
     initialized = false;
     notify();
-    return syncToSupabase(memoryCart);
+    if (lastUserId) {
+      return syncToSupabase(memoryCart);
+    } else {
+      saveGuestCartToLocalStorage(memoryCart);
+      return Promise.resolve();
+    }
   },
 
   subscribe(listener: () => void) {
@@ -221,3 +330,18 @@ export const cartStore = {
     };
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === GUEST_CART_KEY && !lastUserId) {
+      const updatedCart = loadGuestCartFromLocalStorage();
+      const currentJson = JSON.stringify(memoryCart);
+      const updatedJson = JSON.stringify(updatedCart);
+      if (currentJson !== updatedJson) {
+        memoryCart = updatedCart;
+        lastSavedCartJson = updatedJson;
+        notify();
+      }
+    }
+  });
+}

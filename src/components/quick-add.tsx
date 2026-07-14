@@ -40,10 +40,6 @@ export function QuickAdd({
     e.preventDefault();
     e.stopPropagation();
 
-    // Auth gate — redirect to login if not logged in, no toast
-    const authed = await requireAuth();
-    if (!authed) return;
-
     if (isAdded) return;
 
     if (stockQty <= 0) {

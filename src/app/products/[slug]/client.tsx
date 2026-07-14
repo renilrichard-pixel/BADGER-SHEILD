@@ -135,10 +135,6 @@ export default function ProductClient({ product }: { product: Product }) {
   }, [product._id]);
 
   const handleAddToCart = async () => {
-    // Auth gate — redirect to login silently if not authenticated
-    const authed = await requireAuth();
-    if (!authed) return;
-
     if (!selectedSize && product.sizes && product.sizes.length > 0) {
       setSizeError(true);
       toast.error('Please select a size');

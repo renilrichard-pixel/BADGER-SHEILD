@@ -80,7 +80,7 @@ export default function Home() {
 
 
         {/* Hero Content */}
-        <div className="relative z-10 container mx-auto max-w-7xl px-6 py-14 md:py-20 w-full">
+        <div className="relative z-10 container mx-auto max-w-7xl px-4 sm:px-6 py-14 md:py-20 w-full">
           <div className="max-w-2xl space-y-8">
 
             {/* Eyebrow badge */}

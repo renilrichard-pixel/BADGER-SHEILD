@@ -427,7 +427,7 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto px-4 py-12 md:py-24 max-w-6xl pb-28 md:pb-24 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex justify-between items-center mb-12 border-b border-border/40 pb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-12 border-b border-border/40 pb-6">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] font-bold opacity-40 mb-1">
             Account Dashboard
