@@ -6,13 +6,18 @@ import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 
-import { RatingsProvider } from "@/context/RatingsContext";
-
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "BADGER SHEILD | Luxury Clothing",
   description: "Minimalist luxury t-shirts and clothing.",
+};
+
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F0F10" },
+  ],
 };
 
 export default function RootLayout({
@@ -25,18 +30,16 @@ export default function RootLayout({
       <body className={`${inter.className} min-h-screen antialiased flex flex-col`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
         >
-          <RatingsProvider>
-            <Navbar />
-            <main className="flex-1 w-full">
-              {children}
-            </main>
-            <Footer />
-            <Toaster />
-          </RatingsProvider>
+          <Navbar />
+          <main className="flex-1 w-full">
+            {children}
+          </main>
+          <Footer />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

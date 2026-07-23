@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { client } from '@/sanity/lib/client';
 import { createClient } from '@/lib/supabase/server';
 import { NavbarLinks, MobileNavbarLinks, NavbarSearch, UserDropdown, CartButton } from './navbar-client';
+import { ThemeToggle } from './theme-toggle';
 
 export async function Navbar() {
   const supabase = await createClient();
@@ -43,7 +44,7 @@ export async function Navbar() {
               width={768}
               height={117}
               priority
-              className="h-[16px] min-[360px]:h-[18px] min-[375px]:h-[20px] min-[390px]:h-[22px] sm:h-[24px] md:h-[26px] lg:h-[30px] w-auto object-contain"
+              className="h-[16px] min-[360px]:h-[18px] min-[375px]:h-[20px] min-[390px]:h-[22px] sm:h-[24px] md:h-[26px] lg:h-[30px] w-auto object-contain dark:invert"
             />
           </Link>
           <NavbarLinks categories={categories} />
@@ -53,6 +54,9 @@ export async function Navbar() {
           <NavbarSearch />
           <UserDropdown email={user?.email ?? null} />
           <CartButton />
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </header>

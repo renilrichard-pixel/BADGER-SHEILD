@@ -57,6 +57,8 @@ interface Product {
   categorySlug?: string;
   categoryName?: string;
   images?: string[];
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 const TRUST_BADGES = [
@@ -68,7 +70,13 @@ const TRUST_BADGES = [
 
 export default function ProductClient({ product }: { product: Product }) {
   const { addItem } = useCart();
-  const { ratings, getProductReviews, getUserReview, updateRating, deleteUserReview } = useRatings();
+  const { ratings, getProductReviews, getUserReview, updateRating, deleteUserReview, loadProductReviews, isLoadingReviews, hasMoreReviews } = useRatings();
+
+  useEffect(() => {
+    if (product._id) {
+      loadProductReviews(product._id);
+    }
+  }, [product._id]);
 
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] || '');
   const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0]?.name || '');
@@ -195,10 +203,13 @@ export default function ProductClient({ product }: { product: Product }) {
   const displayPrice = product.salePrice ?? product.price;
   const isOnSale = !!product.salePrice && product.salePrice < product.price;
   
+  const serverRatingValue = product.averageRating ?? product.rating ?? 0;
+  const serverRatingCount = product.reviewCount ?? 0;
+
   const dbRating = ratings[product._id || ''];
   const hasDbRating = dbRating && dbRating.count > 0;
-  const ratingValue = hasDbRating ? dbRating.rate : (product.rating ?? 0);
-  const ratingCount = hasDbRating ? dbRating.count : 0;
+  const ratingValue = hasDbRating ? dbRating.rate : serverRatingValue;
+  const ratingCount = hasDbRating ? dbRating.count : serverRatingCount;
   const hasAnyRating = ratingValue > 0;
 
   const categoryName = product.categoryName || product.categorySlug?.replace(/-/g, ' ') || 'Products';
@@ -242,6 +253,7 @@ export default function ProductClient({ product }: { product: Product }) {
                   className="w-full h-full object-cover transition-transform duration-700"
                   style={isZoomed ? { transform: 'scale(2)', transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` } : {}}
                   priority
+                  quality={85}
                 />
               ) : (
                 <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -282,10 +294,12 @@ export default function ProductClient({ product }: { product: Product }) {
                   >
                     <Image
                       src={img}
-                      alt={`view-${idx + 1}`}
+                      alt={`${product.name || 'Product'} view thumbnail ${idx + 1}`}
                       fill
                       sizes="80px"
                       className="w-full h-full object-cover"
+                      loading="lazy"
+                      quality={65}
                     />
                   </button>
                 ))}
@@ -762,7 +776,7 @@ export default function ProductClient({ product }: { product: Product }) {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="flex-1 bg-black text-white text-[10px] font-bold uppercase tracking-widest py-2.5 hover:bg-black/90 transition-colors disabled:opacity-50"
+                        className="flex-1 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest py-2.5 hover:bg-foreground/90 transition-colors disabled:opacity-50"
                       >
                         {isSubmitting ? 'Saving...' : existingReview ? 'Update' : 'Submit'}
                       </button>
@@ -815,10 +829,12 @@ export default function ProductClient({ product }: { product: Product }) {
                             {avatarUrl ? (
                               <Image
                                 src={avatarUrl}
-                                alt={profileName}
+                                alt={`${profileName} profile avatar`}
                                 width={32}
                                 height={32}
                                 className="w-8 h-8 rounded-full object-cover border border-border/60"
+                                loading="lazy"
+                                quality={60}
                               />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-muted border border-border/80 flex items-center justify-center text-[10px] font-bold text-muted-foreground">
@@ -856,6 +872,17 @@ export default function ProductClient({ product }: { product: Product }) {
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {hasMoreReviews[product._id || ''] && (
+                <div className="mt-8 flex justify-center">
+                  <button
+                    onClick={() => loadProductReviews(product._id || '', true)}
+                    disabled={isLoadingReviews}
+                    className="border border-foreground text-[10px] font-bold uppercase tracking-widest px-8 py-3 hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
+                  >
+                    {isLoadingReviews ? 'Loading...' : 'Load More Reviews'}
+                  </button>
                 </div>
               )}
             </div>

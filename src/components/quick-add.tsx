@@ -108,7 +108,7 @@ export function QuickAdd({
         <button
           onClick={handleInitialClick}
           disabled={stockQty <= 0 || isAdded}
-          className="w-full bg-black/95 backdrop-blur-sm text-white hover:bg-black disabled:opacity-90 disabled:text-gray-400 disabled:cursor-not-allowed text-[11px] uppercase tracking-[0.15em] font-bold py-3.5 px-3 transition-all flex items-center justify-center gap-2 rounded-sm shadow-md"
+          className="w-full bg-foreground/95 backdrop-blur-sm text-background hover:bg-foreground disabled:opacity-90 disabled:text-muted-foreground/60 disabled:cursor-not-allowed text-[11px] uppercase tracking-[0.15em] font-bold py-3.5 px-3 transition-all flex items-center justify-center gap-2 rounded-sm shadow-md"
         >
           {isAdded ? (
             <>

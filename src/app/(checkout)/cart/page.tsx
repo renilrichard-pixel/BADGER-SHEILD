@@ -130,6 +130,8 @@ export default function CartPage() {
                       fill
                       sizes="(max-width: 640px) 80px, (max-width: 768px) 112px, 128px"
                       className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                      loading="lazy"
+                      quality={70}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted">

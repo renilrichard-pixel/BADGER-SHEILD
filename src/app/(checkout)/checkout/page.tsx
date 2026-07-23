@@ -146,36 +146,6 @@ export default function CheckoutPage() {
     toast.success('Reset. You can try again.');
   }, []);
 
-  /* ── Save order to Supabase ── */
-  const saveOrder = useCallback(async (orderData: any) => {
-    if (!user) {
-      console.warn('saveOrder called but user is null');
-      return false;
-    }
-    const sb = createClient();
-    const { error } = await sb.from('orders').upsert({
-      user_id: user.id,
-      order_id: orderData.id,
-      status: orderData.status ?? 'confirmed',
-      items: orderData.items,
-      subtotal: orderData.subtotal,
-      shipping_fee: orderData.shipping ?? 0,
-      total: orderData.total,
-      payment_method: orderData.payMethod,
-      razorpay_order_id: orderData.razorpay_order_id ?? null,
-      razorpay_payment_id: orderData.razorpay_payment_id ?? null,
-      customer_info: orderData.customer_info ?? null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'order_id' });
-    
-    if (error) {
-      console.error('Error saving order to Supabase:', error);
-      toast.error(`Failed to initialize order in database: ${error.message}`);
-      return false;
-    }
-    return true;
-  }, [user]);
-
   /* ── Launch Razorpay ── */
   const launchRazorpay = useCallback(async () => {
     if (!window.Razorpay) { toast.error('Payment SDK not ready. Refresh and try again.'); return; }
@@ -206,58 +176,41 @@ export default function CheckoutPage() {
       return;
     }
 
-    /* 2 — Create Razorpay order */
-    const orderId = `BS-${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`;
+    /* 2 — Create Razorpay order on server (which also registers pending order) */
     const rzpRes = await fetch('/api/checkout/razorpay/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: selectedItems.map(i => ({ productId: i.productId, name: i.name, quantity: i.quantity })), orderId }),
+      body: JSON.stringify({
+        items: selectedItems.map(i => ({
+          productId: i.productId,
+          name: i.name,
+          quantity: i.quantity,
+          selectedSize: i.selectedSize,
+          selectedColor: i.selectedColor,
+        })),
+        addressId: selectedAddr,
+        paymentMethod: payMethod,
+      }),
     }).catch(() => null);
 
     if (!rzpRes?.ok) {
+      const err = await rzpRes?.json().catch(() => ({}));
       const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       if (!keyId) {
         toast.error('Razorpay keys not configured. Add RAZORPAY_KEY_ID to .env.local');
       } else {
-        toast.error('Could not create payment order. Try again.');
+        toast.error(err?.error ?? 'Could not create payment order. Try again.');
       }
       setIsProcessing(false);
       return;
     }
 
-    const { order: rzpOrder, subtotal: calculatedSubtotal, shipping: calculatedShipping, total: calculatedTotal } = await rzpRes.json();
-
-    const customer_info = {
-      first_name: addr.first_name,
-      last_name: addr.last_name,
-      phone: addr.phone,
-      address: addr.address,
-      city: addr.city,
-      state: addr.state,
-      pincode: addr.pincode,
-      email: user?.email ?? '',
-    };
-
-    /* 3 — Save pending order */
-    const saved = await saveOrder({
-      id: orderId,
-      status: 'pending',
-      items: selectedItems,
-      subtotal: calculatedSubtotal,
-      shipping: calculatedShipping,
-      total: calculatedTotal,
-      payMethod,
-      razorpay_order_id: rzpOrder.id,
-      customer_info,
-    });
-
-    if (!saved) {
-      setIsProcessing(false);
-      return;
-    }
+    const { order: rzpOrder, orderId: serverOrderId } = await rzpRes.json();
+    const orderId = serverOrderId;
 
     saveActive({ orderId, razorpayOrderId: rzpOrder.id });
     setActiveOrderId(orderId);
+    setActiveRzpOrderId(rzpOrder.id);
     setActiveRzpOrderId(rzpOrder.id);
 
     /* 4 — Open modal */
@@ -333,7 +286,7 @@ export default function CheckoutPage() {
     });
 
     rzp.open();
-  }, [selectedAddr, addresses, selectedItems, total, subtotal, shipping, payMethod, user, saveOrder, removeItem, updateQuantity, removeMultipleFromCart, router]);
+  }, [selectedAddr, addresses, selectedItems, total, subtotal, shipping, payMethod, user, removeItem, updateQuantity, removeMultipleFromCart, router]);
 
   /* ── Guards ── */
   if (isLoading) return (
@@ -497,6 +450,8 @@ export default function CheckoutPage() {
                               fill
                               sizes="56px"
                               className="w-full h-full object-cover"
+                              loading="lazy"
+                              quality={65}
                             />
                           : <Package className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground/30" />
                         }

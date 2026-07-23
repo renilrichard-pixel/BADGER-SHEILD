@@ -7,7 +7,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-muted/20 p-4 text-[#171412] sm:p-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/20 p-4 text-foreground sm:p-8">
       <div className="mx-auto grid w-full max-w-5xl overflow-hidden border border-border/10 bg-background shadow-2xl md:min-h-[620px] lg:w-[72%] lg:grid-cols-[1.08fr_0.92fr]">
         <section className="hidden bg-[#151311] px-8 py-8 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="flex items-center justify-between gap-6">
@@ -52,13 +52,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </div>
 
             <div className="mb-8 space-y-4">
-              <div className="inline-flex items-center gap-2 border border-[#171412]/15 bg-white/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em]">
+              <div className="inline-flex items-center gap-2 border border-border bg-background/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-foreground">
                 <LockKeyhole className="h-3.5 w-3.5" />
                 Member access
               </div>
               <div className="space-y-3">
                 <h2 className="text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">Sign in</h2>
-                <p className="max-w-sm text-sm leading-6 text-[#5f5850]">
+                <p className="max-w-sm text-sm leading-6 text-muted-foreground">
                   Access your bag, wishlist, and new tee drops from the Badger Sheild collection.
                 </p>
               </div>
@@ -66,12 +66,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
             <form className="space-y-5" action={login}>
               {params?.message && (
-                <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800">
+                <div className="border border-emerald-200 bg-emerald-50/10 px-4 py-3 text-xs font-semibold text-emerald-600">
                   {params.message}
                 </div>
               )}
               {params?.error && (
-                <div className="border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-800">
+                <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">
                   {params.error}
                 </div>
               )}
@@ -79,7 +79,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <input type="hidden" name="next" value={params?.next || ''} />
 
               <label className="block space-y-2" htmlFor="email">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">Email address</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Email address</span>
                 <input
                   id="email"
                   name="email"
@@ -88,20 +88,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                   autoCapitalize="none"
                   spellCheck={false}
                   required
-                  className="h-12 w-full border border-[#171412]/15 bg-white px-4 text-sm lowercase outline-none transition-colors placeholder:text-[#9c9287] focus:border-[#171412]"
+                  className="h-12 w-full border border-border bg-background px-4 text-sm lowercase outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
                   placeholder="you@example.com"
                 />
               </label>
 
               <label className="block space-y-2" htmlFor="password">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">Password</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Password</span>
                 <input
                   id="password"
                   name="password"
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="h-12 w-full border border-[#171412]/15 bg-white px-4 text-sm outline-none transition-colors placeholder:text-[#9c9287] focus:border-[#171412]"
+                  className="h-12 w-full border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
                   placeholder="Enter password"
                 />
               </label>
@@ -109,20 +109,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <div className="flex justify-end mt-1">
                 <Link
                   href="/forgot-password"
-                  className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#5f5850] hover:text-[#171412] hover:underline underline-offset-4"
+                  className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground hover:underline underline-offset-4"
                 >
                   Forgot Password?
                 </Link>
               </div>
 
-              <Button type="submit" className="h-12 w-full rounded-none bg-[#171412] text-[11px] font-black uppercase tracking-[0.24em] text-white hover:bg-[#2b2520]">
+              <Button type="submit" className="h-12 w-full rounded-none bg-primary text-[11px] font-black uppercase tracking-[0.24em] text-primary-foreground hover:bg-primary/90">
                 Sign in <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </form>
 
-            <div className="mt-8 flex flex-col gap-3 border-t border-[#171412]/10 pt-6 text-xs text-[#5f5850] sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <span>New to Badger Sheild?</span>
-              <Link href={params?.next ? `/register?next=${encodeURIComponent(params.next)}` : '/register'} className="inline-flex items-center gap-2 font-black uppercase tracking-[0.16em] text-[#171412] hover:underline underline-offset-4">
+              <Link href={params?.next ? `/register?next=${encodeURIComponent(params.next)}` : '/register'} className="inline-flex items-center gap-2 font-black uppercase tracking-[0.16em] text-foreground hover:underline underline-offset-4">
                 Create account <Sparkles className="h-3.5 w-3.5" />
               </Link>
             </div>

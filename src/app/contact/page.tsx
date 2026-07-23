@@ -44,7 +44,7 @@ export default function ContactPage() {
                 <Mail className="w-4 h-4" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">EMAIL US</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">EMAIL US</h3>
                 <p className="text-sm font-semibold">
                   <a href="mailto:support@badgersheild.com" className="text-foreground hover:underline transition-colors">
                     support@badgersheild.com
@@ -62,7 +62,7 @@ export default function ContactPage() {
                 <Phone className="w-4 h-4" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">CALL US</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">CALL US</h3>
                 <p className="text-sm font-semibold text-foreground">
                   +91 6238393614
                 </p>
@@ -78,7 +78,7 @@ export default function ContactPage() {
                 <Clock className="w-4 h-4" />
               </div>
               <div className="space-y-2.5 flex-1">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">OPERATING HOURS</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">OPERATING HOURS</h3>
                 <div className="space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex justify-between items-center border-b border-border/40 pb-1.5">
                     <span>Mon–Sat</span>

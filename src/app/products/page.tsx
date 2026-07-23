@@ -43,7 +43,7 @@ export default async function ProductsPage({
 
   productsQuery += `] ${sortClause} {
     _id, name, slug, price, salePrice,
-    image, images,
+    image, images, rating,
     newArrival, bestSeller,
     "colors": colors[].name,
     "colorHexes": colors[].hex,
@@ -53,7 +53,10 @@ export default async function ProductsPage({
     "stockQty": stock
   }`;
 
-  const products = await client.fetch(productsQuery, queryParams);
+  const [products, aggregates] = await Promise.all([
+    client.fetch(productsQuery, queryParams),
+    import('@/lib/reviews').then(m => m.getCachedReviewAggregates())
+  ]);
 
   type SanityProduct = {
     _id: string;
@@ -63,6 +66,7 @@ export default async function ProductsPage({
     salePrice?: number;
     image?: SanityImageSource;
     images?: SanityImageSource[];
+    rating?: number;
     newArrival?: boolean;
     bestSeller?: boolean;
     colors?: string[];
@@ -102,25 +106,33 @@ export default async function ProductsPage({
             <>
               {/* Dense grid layout to reduce card sizes */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
-                {products.map((product: SanityProduct) => (
-                  <ProductCard
-                    key={product._id}
-                    id={product._id}
-                    name={product.name}
-                    slug={product.slug?.current || ''}
-                    price={product.price}
-                    salePrice={product.salePrice}
-                    image={product.image}
-                    images={product.images}
-                    newArrival={product.newArrival}
-                    bestSeller={product.bestSeller}
-                    colors={product.colors}
-                    colorHexes={product.colorHexes}
-                    sizes={product.sizes}
-                    stockQty={product.stockQty}
-                    categoryName={product.categoryName || product.categorySlug?.replace(/-/g, ' ')}
-                  />
-                ))}
+                {products.map((product: SanityProduct) => {
+                  const agg = aggregates[product._id];
+                  const averageRating = agg && agg.reviewCount > 0 ? agg.averageRating : (product.rating ?? 0);
+                  const reviewCount = agg ? agg.reviewCount : 0;
+
+                  return (
+                    <ProductCard
+                      key={product._id}
+                      id={product._id}
+                      name={product.name}
+                      slug={product.slug?.current || ''}
+                      price={product.price}
+                      salePrice={product.salePrice}
+                      image={product.image}
+                      images={product.images}
+                      newArrival={product.newArrival}
+                      bestSeller={product.bestSeller}
+                      colors={product.colors}
+                      colorHexes={product.colorHexes}
+                      sizes={product.sizes}
+                      stockQty={product.stockQty}
+                      categoryName={product.categoryName || product.categorySlug?.replace(/-/g, ' ')}
+                      averageRating={averageRating}
+                      reviewCount={reviewCount}
+                    />
+                  );
+                })}
               </div>
 
               {products.length >= 20 && (

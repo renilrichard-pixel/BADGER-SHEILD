@@ -11,22 +11,22 @@ export async function Footer() {
   const categories = await client.fetch<FooterCategory[]>(`*[_type == "category" && slug.current != "joggers"] | order(displayOrder asc)`);
 
   return (
-    <footer className="bg-background border-t border-border mt-auto">
+    <footer className="bg-[#141414] text-[#f5f5f5] border-t border-white/10 mt-auto">
       <div className="container mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div className="space-y-4">
-            <h3 className="font-bold text-xl tracking-tighter uppercase">BADGER SHEILD</h3>
-            <p className="text-muted-foreground text-sm max-w-xs">
+            <h3 className="font-bold text-xl tracking-tighter uppercase text-white">BADGER SHEILD</h3>
+            <p className="text-white/60 text-sm max-w-xs leading-relaxed font-light">
               Minimalist luxury clothing designed for the modern individual. Quality over quantity.
             </p>
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm">Shop</h4>
+            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm text-white">Shop</h4>
             <ul className="space-y-2">
               {categories.map((category) => (
                 <li key={category._id}>
-                  <Link href={`/products?category=${category.slug?.current}`} className="text-muted-foreground hover:text-foreground text-sm transition-colors">
+                  <Link href={`/products?category=${category.slug?.current}`} className="text-white/60 hover:text-white text-sm transition-colors font-light">
                     {category.name}
                   </Link>
                 </li>
@@ -35,32 +35,32 @@ export async function Footer() {
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm">Support</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link></li>
-              <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact Us</Link></li>
-              <li><Link href="/size-guide" className="hover:text-foreground transition-colors">Size Guide</Link></li>
+            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm text-white">Support</h4>
+            <ul className="space-y-2 text-sm text-white/60">
+              <li><Link href="/faq" className="hover:text-white transition-colors font-light">FAQ</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors font-light">Contact Us</Link></li>
+              <li><Link href="/size-guide" className="hover:text-white transition-colors font-light">Size Guide</Link></li>
             </ul>
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm">Legal</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/returns" className="hover:text-foreground transition-colors">Return Policy</Link></li>
+            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm text-white">Legal</h4>
+            <ul className="space-y-2 text-sm text-white/60">
+              <li><Link href="/terms" className="hover:text-white transition-colors font-light">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors font-light">Privacy Policy</Link></li>
+              <li><Link href="/returns" className="hover:text-white transition-colors font-light">Return Policy</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm">FOLLOW US</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h4 className="font-semibold mb-4 uppercase tracking-wider text-sm text-white">FOLLOW US</h4>
+            <ul className="space-y-2 text-sm text-white/60">
               <li>
                 <a
                   href="https://www.instagram.com/badger_sheild/?utm_source=ig_web_button_share_sheet"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 hover:text-foreground transition-colors"
+                  className="flex items-center gap-2 hover:text-white transition-colors font-light"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -87,7 +87,7 @@ export async function Footer() {
                   href="https://www.facebook.com/share/1Crw5v8Pn8/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 hover:text-foreground transition-colors"
+                  className="flex items-center gap-2 hover:text-white transition-colors font-light"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -110,14 +110,14 @@ export async function Footer() {
           </div>
         </div>
         
-        <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-muted-foreground">
+        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-white/40 font-light">
             &copy; {new Date().getFullYear()} BADGER SHEILD. All rights reserved.
           </p>
           <div className="flex gap-4">
-            <span className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Instagram</span>
-            <span className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Twitter</span>
-            <span className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Pinterest</span>
+            <span className="text-xs text-white/40 cursor-pointer hover:text-white transition-colors font-light">Instagram</span>
+            <span className="text-xs text-white/40 cursor-pointer hover:text-white transition-colors font-light">Twitter</span>
+            <span className="text-xs text-white/40 cursor-pointer hover:text-white transition-colors font-light">Pinterest</span>
           </div>
         </div>
       </div>

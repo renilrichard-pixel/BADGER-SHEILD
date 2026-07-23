@@ -29,7 +29,7 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
   const displayError = validationError || params?.error;
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-muted/20 p-4 text-[#171412] sm:p-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-muted/20 p-4 text-foreground sm:p-8">
       <div className="mx-auto grid w-full max-w-5xl overflow-hidden border border-border/10 bg-background shadow-2xl md:min-h-[620px] lg:w-[72%] lg:grid-cols-[1.08fr_0.92fr]">
         <section className="hidden bg-[#151311] px-8 py-8 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="flex items-center justify-between gap-6">
@@ -74,13 +74,13 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
             </div>
 
             <div className="mb-8 space-y-4">
-              <div className="inline-flex items-center gap-2 border border-[#171412]/15 bg-white/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em]">
+              <div className="inline-flex items-center gap-2 border border-border bg-background/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-foreground">
                 <LockKeyhole className="h-3.5 w-3.5" />
                 Reset Password
               </div>
               <div className="space-y-3">
                 <h2 className="text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">New credentials</h2>
-                <p className="max-w-sm text-sm leading-6 text-[#5f5850]">
+                <p className="max-w-sm text-sm leading-6 text-muted-foreground">
                   Enter your new password below. It must be at least 6 characters long.
                 </p>
               </div>
@@ -88,18 +88,18 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
 
             <form className="space-y-5" action={resetPassword} onSubmit={handleSubmit}>
               {params?.message && (
-                <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800">
+                <div className="border border-emerald-200 bg-emerald-50/10 px-4 py-3 text-xs font-semibold text-emerald-600">
                   {params.message}
                 </div>
               )}
               {displayError && (
-                <div className="border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-800">
+                <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">
                   {displayError}
                 </div>
               )}
 
               <label className="block space-y-2" htmlFor="password">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">New Password</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">New Password</span>
                 <input
                   id="password"
                   name="password"
@@ -108,13 +108,13 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 w-full border border-[#171412]/15 bg-white px-4 text-sm outline-none transition-colors placeholder:text-[#9c9287] focus:border-[#171412]"
+                  className="h-12 w-full border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
                   placeholder="Enter new password"
                 />
               </label>
 
               <label className="block space-y-2" htmlFor="confirmPassword">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5f5850]">Confirm Password</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Confirm Password</span>
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -123,12 +123,12 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-12 w-full border border-[#171412]/15 bg-white px-4 text-sm outline-none transition-colors placeholder:text-[#9c9287] focus:border-[#171412]"
+                  className="h-12 w-full border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
                   placeholder="Confirm new password"
                 />
               </label>
 
-              <Button type="submit" className="h-12 w-full rounded-none bg-[#171412] text-[11px] font-black uppercase tracking-[0.24em] text-white hover:bg-[#2b2520]">
+              <Button type="submit" className="h-12 w-full rounded-none bg-primary text-[11px] font-black uppercase tracking-[0.24em] text-primary-foreground hover:bg-primary/90">
                 UPDATE PASSWORD <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </form>

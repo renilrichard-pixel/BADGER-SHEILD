@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useEffect, useRef, useTransition, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, User, Heart, LogOut, LogIn, UserCircle, ShoppingBag } from 'lucide-react';
+import { Search, User, Heart, LogOut, LogIn, UserCircle, ShoppingBag, Sun, Moon, Laptop } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/lib/hooks/use-cart';
@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { cartStore } from '@/lib/cart-store';
 import { wishlistStore } from '@/lib/wishlist-store';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
 
 interface NavbarCategory {
   _id: string;
@@ -97,6 +98,13 @@ export function NavbarLinks({ categories }: { categories: NavbarCategory[] }) {
 }
 
 export function MobileNavbarLinks({ categories, onClose }: NavbarLinksProps) {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <Suspense fallback={
       <nav className="flex flex-col gap-4 mt-8">
@@ -109,6 +117,37 @@ export function MobileNavbarLinks({ categories, onClose }: NavbarLinksProps) {
     }>
       <nav className="flex flex-col gap-4 mt-8">
         <MobileNavbarLinksInner categories={categories} onClose={onClose} />
+        
+        {mounted && (
+          <div className="border-t border-border/60 mt-8 pt-6 px-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground mb-4">
+              Theme
+            </p>
+            <div className="grid grid-cols-3 gap-1 bg-muted/40 p-1 border border-border/50 rounded-sm">
+              {[
+                { id: 'light', label: 'Light', Icon: Sun },
+                { id: 'dark', label: 'Dark', Icon: Moon },
+                { id: 'system', label: 'System', Icon: Laptop },
+              ].map(({ id, label, Icon }) => {
+                const isActive = theme === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setTheme(id)}
+                    className={`flex flex-col items-center justify-center py-2.5 gap-1.5 transition-all relative font-bold text-[9px] uppercase tracking-widest rounded-sm cursor-pointer
+                      ${isActive
+                        ? 'bg-background text-foreground shadow-xs border border-border/30'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/20 border border-transparent'
+                      }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </nav>
     </Suspense>
   );

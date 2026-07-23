@@ -1,12 +1,9 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { WishlistButton } from '@/components/wishlist-button';
 import { QuickAdd } from '@/components/quick-add';
-import { useRatings } from '@/context/RatingsContext';
 import { urlFor } from '@/sanity/lib/image';
 import type { SanityImageSource } from '@sanity/image-url';
 
@@ -25,6 +22,9 @@ interface ProductCardProps {
   sizes?: string[] | null;
   stockQty?: number;
   categoryName?: string;
+  priority?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 function getImageUrl(source: SanityImageSource | null | undefined): string | null {
@@ -51,6 +51,9 @@ export function ProductCard({
   sizes,
   stockQty = 99,
   categoryName,
+  priority = false,
+  averageRating = 0,
+  reviewCount = 0,
 }: ProductCardProps) {
   const displayPrice = salePrice ?? price;
   const isOnSale = !!salePrice && salePrice < price;
@@ -61,10 +64,8 @@ export function ProductCard({
   const mainImageUrl = getImageUrl(primaryImage);
   const hoverImageUrl = getImageUrl(secondaryImage);
 
-  const { ratings } = useRatings();
-  const productRating = ratings[id];
-  const ratingValue = productRating?.rate ?? 0;
-  const ratingCount = productRating?.count ?? 0;
+  const ratingValue = averageRating;
+  const ratingCount = reviewCount;
 
   return (
     <div className="group flex flex-col justify-between h-full bg-card text-card-foreground">
@@ -78,6 +79,8 @@ export function ProductCard({
                 fill
                 sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                priority={priority}
+                quality={80}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -94,6 +97,7 @@ export function ProductCard({
                 fill
                 sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                quality={70}
               />
             )}
 

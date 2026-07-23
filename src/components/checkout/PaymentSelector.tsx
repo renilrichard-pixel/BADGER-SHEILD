@@ -17,7 +17,7 @@ function UpiMark({ active }: { active: boolean }) {
         x="38" y="22"
         fontFamily="'Arial Black', Arial, sans-serif"
         fontWeight="900" fontSize="15"
-        fill={active ? '#1a1a1a' : '#aaa'}
+        fill={active ? 'var(--foreground)' : 'var(--muted-foreground)'}
         letterSpacing="1"
       >UPI</text>
     </svg>

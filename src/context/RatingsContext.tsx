@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { submitReviewAction, deleteReviewAction } from "@/app/actions/reviews";
 
 export interface RatingInfo {
   rate: number;
@@ -28,6 +29,10 @@ export interface Review {
 
 interface RatingsContextType {
   ratings: Record<string, RatingInfo>;
+  productReviews: Record<string, Review[]>;
+  hasMoreReviews: Record<string, boolean>;
+  isLoadingReviews: boolean;
+  loadProductReviews: (productId: string, loadMore?: boolean) => Promise<void>;
   getProductReviews: (productId: string) => Review[];
   getUserReview: (productId: string) => Review | null;
   updateRating: (productId: string, rating: number, experience?: string) => Promise<{ success?: boolean; error?: string }>;
@@ -113,48 +118,21 @@ const addProfilesToReviews = async (reviews: any[], sessionUser: any): Promise<R
   }));
 };
 
-const buildAggregates = (reviews: Review[]): Record<string, RatingInfo> => {
-  const aggregated: Record<string, RatingInfo> = {};
-
-  reviews.forEach((review) => {
-    if (!aggregated[review.product_id]) {
-      aggregated[review.product_id] = { rate: 0, count: 0, totalPoints: 0 };
-    }
-
-    aggregated[review.product_id].count += 1;
-    aggregated[review.product_id].totalPoints += review.rating;
-    aggregated[review.product_id].rate =
-      aggregated[review.product_id].totalPoints / aggregated[review.product_id].count;
-  });
-
-  return aggregated;
-};
-
 export function RatingsProvider({ children }: { children: React.ReactNode }) {
   const [ratings, setRatings] = useState<Record<string, RatingInfo>>({});
-  const [allReviews, setAllReviews] = useState<Review[]>([]);
+  const [productReviews, setProductReviews] = useState<Record<string, Review[]>>({});
+  const [hasMoreReviews, setHasMoreReviews] = useState<Record<string, boolean>>({});
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [userSession, setUserSession] = useState<any>(null);
 
+  const PAGE_SIZE = 20;
+
   useEffect(() => {
-    const fetchAllReviews = async () => {
+    const checkSession = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       setUserSession(sessionData.session);
-
-      const { data: reviews, error } = await supabase
-        .from('reviews')
-        .select('*');
-
-      if (error) {
-        console.error('Failed to fetch reviews:', error);
-        return;
-      }
-
-      const reviewsWithProfiles = await addProfilesToReviews(reviews || [], sessionData.session?.user);
-      setAllReviews(reviewsWithProfiles);
-      setRatings(buildAggregates(reviewsWithProfiles));
     };
-
-    fetchAllReviews();
+    checkSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setUserSession(session);
@@ -163,111 +141,117 @@ export function RatingsProvider({ children }: { children: React.ReactNode }) {
     return () => { listener?.subscription.unsubscribe(); };
   }, []);
 
+  /**
+   * lazy load reviews for a specific product in paginated batches.
+   * Fetches PAGE_SIZE + 1 reviews (21 rows) to check if more reviews exist,
+   * rendering only the first PAGE_SIZE (20 rows) and setting hasMore accordingly.
+   * Explicitly orders reviews by 'created_at' DESC to show newest reviews first.
+   */
+  const loadProductReviews = async (productId: string, loadMore = false) => {
+    setIsLoadingReviews(true);
+    try {
+      const currentReviews = loadMore ? (productReviews[productId] || []) : [];
+      const offset = currentReviews.length;
+
+      const { data: reviews, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false }) // Explicit ordering newest first
+        .range(offset, offset + PAGE_SIZE); // Fetch PAGE_SIZE + 1 items
+
+      if (error) {
+        console.error('Failed to fetch product reviews:', error);
+        return;
+      }
+
+      const hasMore = (reviews || []).length > PAGE_SIZE;
+      const pageReviews = hasMore ? reviews.slice(0, PAGE_SIZE) : (reviews || []);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const reviewsWithProfiles = await addProfilesToReviews(pageReviews, sessionData.session?.user);
+
+      const mergedReviews = [...currentReviews, ...reviewsWithProfiles];
+
+      setProductReviews(prev => ({
+        ...prev,
+        [productId]: mergedReviews
+      }));
+
+      setHasMoreReviews(prev => ({
+        ...prev,
+        [productId]: hasMore
+      }));
+
+      // Calculate initial client ratings state from all ratings of this product
+      const { data: allRatings } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('product_id', productId);
+
+      if (allRatings) {
+        const count = allRatings.length;
+        const totalPoints = allRatings.reduce((sum, r) => sum + r.rating, 0);
+        setRatings(prev => ({
+          ...prev,
+          [productId]: { count, rate: count > 0 ? totalPoints / count : 0, totalPoints }
+        }));
+      }
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
   const getProductReviews = (productId: string) => {
-    return allReviews.filter(r => String(r.product_id) === String(productId));
+    return productReviews[productId] || [];
   };
 
   const getUserReview = (productId: string) => {
     if (!userSession?.user?.id) return null;
-    return allReviews.find(r => String(r.product_id) === String(productId) && r.user_id === userSession.user.id) || null;
+    const reviews = productReviews[productId] || [];
+    return reviews.find(r => r.user_id === userSession.user.id) || null;
   };
 
+  /**
+   * MUTATION DESIGN NOTE:
+   * Direct cache invalidation calls are removed from RatingsProvider.
+   * The RatingsProvider delegates writes to submitReviewAction/deleteReviewAction Server Actions
+   * which execute mutations and call revalidateTag(...) inside the server execution block.
+   */
   const updateRating = async (productId: string, rating: number, experience?: string) => {
     if (!userSession?.user?.id) return { error: "Not authenticated" };
 
-    const newReview = {
-      user_id: userSession.user.id,
-      product_id: productId,
-      rating,
-      experience: experience?.trim() || null,
-      reviewer_email: userSession.user.email || null,
-    };
+    const res = await submitReviewAction(productId, rating, experience);
 
-    let { error: upsertError } = await supabase
-      .from('reviews')
-      .upsert(newReview, { onConflict: 'user_id,product_id' });
-
-    if (
-      upsertError &&
-      (upsertError.message?.includes("reviewer_email") || upsertError.code === "PGRST204")
-    ) {
-      const reviewWithoutEmail: Record<string, any> = { ...newReview };
-      delete reviewWithoutEmail.reviewer_email;
-      const retry = await supabase
-        .from('reviews')
-        .upsert(reviewWithoutEmail, { onConflict: 'user_id,product_id' });
-      upsertError = retry.error;
+    if (res.error) {
+      return { error: res.error };
     }
 
-    if (upsertError) {
-      return { error: upsertError.message || "Failed to save review" };
-    }
-
-    const { data: reviewData, error: fetchError } = await supabase
-      .from('reviews')
-      .select('*')
-      .eq('user_id', userSession.user.id)
-      .eq('product_id', productId);
-
-    if (fetchError || !reviewData || reviewData.length === 0) {
-      return { error: fetchError?.message || "Failed to retrieve review" };
-    }
-
-    const [data] = await addProfilesToReviews(reviewData, userSession.user);
-
-    if (data) {
-      const updatedReviews = allReviews.filter(r => !(r.user_id === userSession.user.id && String(r.product_id) === String(productId)));
-      updatedReviews.push(data);
-      setAllReviews(updatedReviews);
-
-      const prodReviews = updatedReviews.filter(r => String(r.product_id) === String(productId));
-      const count = prodReviews.length;
-      const totalPoints = prodReviews.reduce((sum, r) => sum + r.rating, 0);
-      
-      setRatings(prev => ({
-        ...prev,
-        [productId]: { count, rate: count > 0 ? totalPoints / count : 0, totalPoints }
-      }));
-
+    if (res.success && res.data) {
+      // Reload reviews and update client aggregates on success
+      await loadProductReviews(productId, false);
       return { success: true };
     }
-    
+
     return { error: "Failed to save review" };
   };
 
   const deleteUserReview = async (productId: string) => {
     if (!userSession?.user?.id) return { error: "Not authenticated" };
 
-    const { error } = await supabase
-      .from('reviews')
-      .delete()
-      .eq('user_id', userSession.user.id)
-      .eq('product_id', productId);
+    const res = await deleteReviewAction(productId);
 
-    if (error) {
-      return { error: error.message };
+    if (res.error) {
+      return { error: res.error };
     }
 
-    // Update allReviews by filtering out the deleted review
-    const updatedReviews = allReviews.filter(r => !(r.user_id === userSession.user.id && String(r.product_id) === String(productId)));
-    setAllReviews(updatedReviews);
+    if (res.success) {
+      // Reload reviews and update client aggregates on success
+      await loadProductReviews(productId, false);
+      return { success: true };
+    }
 
-    // Recalculate ratings based on updated reviews
-    const prodReviews = updatedReviews.filter(r => String(r.product_id) === String(productId));
-    const count = prodReviews.length;
-    
-    setRatings(prev => {
-      const newRatings = { ...prev };
-      if (count === 0) {
-        delete newRatings[productId];
-      } else {
-        const totalPoints = prodReviews.reduce((sum, r) => sum + r.rating, 0);
-        newRatings[productId] = { count, rate: totalPoints / count, totalPoints };
-      }
-      return newRatings;
-    });
-
-    return { success: true };
+    return { error: "Failed to delete review" };
   };
 
   const isReviewed = (productId: string) => {
@@ -276,6 +260,10 @@ export function RatingsProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     ratings,
+    productReviews,
+    hasMoreReviews,
+    isLoadingReviews,
+    loadProductReviews,
     getProductReviews,
     getUserReview,
     updateRating,

@@ -5,6 +5,8 @@ import { urlForImage } from '@/sanity/lib/image';
 import { notFound } from 'next/navigation';
 import ProductClient from './client';
 import type { SanityImageSource } from '@sanity/image-url';
+import { getCachedProductReviewAggregate } from '@/lib/reviews';
+import { RatingsProvider } from '@/context/RatingsContext';
 
 interface ProductData {
   _id: string;
@@ -24,6 +26,8 @@ interface ProductData {
   bestSeller?: boolean;
   categorySlug?: string;
   categoryName?: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export const revalidate = 0;
@@ -148,10 +152,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     });
   }
 
+  // Fetch the product review aggregate from database aggregation layer (cached)
+  const aggregate = await getCachedProductReviewAggregate(productData._id);
+
   const product = {
     ...productData,
     images: resolvedImages,
+    averageRating: aggregate.averageRating,
+    reviewCount: aggregate.reviewCount,
   };
 
-  return <ProductClient product={product} />;
+  return (
+    <RatingsProvider>
+      <ProductClient product={product} />
+    </RatingsProvider>
+  );
 }
