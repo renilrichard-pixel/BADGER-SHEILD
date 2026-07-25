@@ -161,7 +161,14 @@ export default function CheckoutPage() {
     const stockRes = await fetch('/api/checkout/stock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: selectedItems }),
+      body: JSON.stringify({
+        items: selectedItems.map(i => ({
+          productId: i.productId,
+          cartId: i.cartId,
+          name: i.name,
+          quantity: i.quantity,
+        })),
+      }),
     }).catch(() => null);
 
     if (!stockRes?.ok) {
