@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     siteName: 'BADGER SHEILD',
     images: [
       {
-        url: '/logo.png',
-        width: 1200,
-        height: 630,
+        url: '/assets/images/logo-dark.png',
+        width: 1264,
+        height: 96,
         alt: 'BADGER SHEILD Logo',
       },
     ],
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'BADGER SHEILD | Premium Menswear & Luxury T-Shirts',
     description: 'Shop premium menswear essentials at BADGER SHEILD. Experience luxury everyday style with our heavyweight cotton t-shirts, clean fits, and refined streetwear.',
-    images: ['/logo.png'],
+    images: ['/assets/images/logo-dark.png'],
   },
   robots: {
     index: true,
@@ -81,7 +81,7 @@ const jsonLd = {
       "url": "https://badgersheild.com",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://badgersheild.com/logo.png",
+        "url": "https://badgersheild.com/assets/images/logo-dark.png",
         "caption": "BADGER SHEILD Logo"
       },
       "sameAs": [

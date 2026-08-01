@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Quote, ShieldCheck, Shirt, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signup } from '../actions';
@@ -12,7 +13,24 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         <section className="flex items-center px-6 py-10 sm:px-10 lg:px-12">
           <div className="mx-auto w-full max-w-sm">
             <div className="mb-10 lg:hidden">
-              <Link href="/" className="text-sm font-black uppercase tracking-[0.28em]">Badger Sheild</Link>
+              <Link href="/" className="inline-block focus-visible:outline-none rounded-sm">
+                <Image
+                  src="/assets/images/logo-dark.png"
+                  alt="BADGER SHEILD Logo"
+                  width={1264}
+                  height={96}
+                  className="h-5 sm:h-6 w-auto object-contain dark:hidden"
+                  priority
+                />
+                <Image
+                  src="/assets/images/logo-light.png"
+                  alt="BADGER SHEILD Logo"
+                  width={1264}
+                  height={96}
+                  className="h-5 sm:h-6 w-auto object-contain hidden dark:block"
+                  priority
+                />
+              </Link>
             </div>
 
             <div className="mb-8 space-y-4">
@@ -95,12 +113,15 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
 
         <section className="hidden bg-[#151311] px-8 py-8 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="flex items-center justify-between gap-6">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center border border-white/25 bg-white text-xl font-black text-[#151311]">B</span>
-              <span className="leading-none">
-                <span className="block text-sm font-black uppercase tracking-[0.28em]">Badger</span>
-                <span className="block text-sm font-black uppercase tracking-[0.28em]">Sheild</span>
-              </span>
+            <Link href="/" className="inline-block focus-visible:outline-none rounded-sm">
+              <Image
+                src="/assets/images/logo-light.png"
+                alt="BADGER SHEILD Logo"
+                width={1264}
+                height={96}
+                className="h-6 sm:h-7 w-auto object-contain"
+                priority
+              />
             </Link>
             <span className="border border-white/15 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/65">Premium tees</span>
           </div>

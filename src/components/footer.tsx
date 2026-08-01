@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { client } from '@/sanity/lib/client';
 
 interface FooterCategory {
@@ -15,7 +16,15 @@ export async function Footer() {
       <div className="container mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div className="space-y-4">
-            <h3 className="font-bold text-xl tracking-tighter uppercase text-white">BADGER SHEILD</h3>
+            <Link href="/" className="inline-block hover:opacity-90 transition-opacity">
+              <Image
+                src="/assets/images/logo-light.png"
+                alt="BADGER SHEILD Logo"
+                width={1264}
+                height={96}
+                className="h-[22px] md:h-[26px] w-auto object-contain"
+              />
+            </Link>
             <p className="text-white/60 text-sm max-w-xs leading-relaxed font-light">
               Minimalist luxury clothing designed for the modern individual. Quality over quantity.
             </p>

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useState, useEffect, useRef, useTransition, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, User, Heart, LogOut, LogIn, UserCircle, ShoppingBag, Sun, Moon, Laptop } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -115,7 +116,25 @@ export function MobileNavbarLinks({ categories, onClose }: NavbarLinksProps) {
         ))}
       </nav>
     }>
-      <nav className="flex flex-col gap-4 mt-8">
+      <nav className="flex flex-col gap-4 mt-6">
+        <div className="px-3 pb-4 mb-2 border-b border-border/40">
+          <Link href="/" onClick={onClose} className="inline-block focus-visible:outline-none rounded-sm">
+            <Image
+              src="/assets/images/logo-dark.png"
+              alt="BADGER SHEILD Logo"
+              width={1264}
+              height={96}
+              className="h-[20px] sm:h-[24px] w-auto object-contain dark:hidden"
+            />
+            <Image
+              src="/assets/images/logo-light.png"
+              alt="BADGER SHEILD Logo"
+              width={1264}
+              height={96}
+              className="h-[20px] sm:h-[24px] w-auto object-contain hidden dark:block"
+            />
+          </Link>
+        </div>
         <MobileNavbarLinksInner categories={categories} onClose={onClose} />
         
         {mounted && (

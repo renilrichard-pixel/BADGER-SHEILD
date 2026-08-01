@@ -91,7 +91,7 @@ export default function OrderConfirmationPage() {
 </head>
 <body>
   <div class="header">
-    <h1>BADGER SHEILD</h1>
+    <img src="/assets/images/logo-dark.png" alt="BADGER SHEILD Logo" style="height:26px;width:auto;display:inline-block;margin-bottom:8px;" />
     <p>Tax Invoice</p>
   </div>
 

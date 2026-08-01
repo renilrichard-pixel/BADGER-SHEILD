@@ -39,12 +39,20 @@ export async function Navbar() {
             className="flex items-center transition-all duration-300 hover:opacity-80 hover:scale-[1.02] active:scale-[0.98] origin-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
           >
             <Image
-              src="/logo.png"
-              alt="BADGER SHIELD Logo"
-              width={768}
-              height={117}
+              src="/assets/images/logo-dark.png"
+              alt="BADGER SHEILD Logo"
+              width={1264}
+              height={96}
               priority
-              className="h-[16px] min-[360px]:h-[18px] min-[375px]:h-[20px] min-[390px]:h-[22px] sm:h-[24px] md:h-[26px] lg:h-[30px] w-auto object-contain dark:invert"
+              className="h-[16px] min-[360px]:h-[18px] min-[375px]:h-[20px] min-[390px]:h-[22px] sm:h-[24px] md:h-[26px] lg:h-[30px] w-auto object-contain dark:hidden"
+            />
+            <Image
+              src="/assets/images/logo-light.png"
+              alt="BADGER SHEILD Logo"
+              width={1264}
+              height={96}
+              priority
+              className="h-[16px] min-[360px]:h-[18px] min-[375px]:h-[20px] min-[390px]:h-[22px] sm:h-[24px] md:h-[26px] lg:h-[30px] w-auto object-contain hidden dark:block"
             />
           </Link>
           <NavbarLinks categories={categories} />

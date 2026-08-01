@@ -74,7 +74,9 @@ export async function sendOrderEmails({ order, email }: { order: any; email?: st
   // ── Customer email ────────────────────────────────────────────────────────
   const customerHtml = `
   <div style="font-family:'Times New Roman',serif;color:#111;max-width:600px;margin:0 auto;border:1px solid #e0e0e0;padding:48px 40px;">
-    <h1 style="font-size:30px;letter-spacing:-1px;text-align:center;margin:0 0 4px;">BADGER SHEILD</h1>
+    <div style="text-align:center;margin:0 0 12px;">
+      <img src="https://badgersheild.com/assets/images/logo-dark.png" alt="BADGER SHEILD Logo" style="height:28px;width:auto;display:inline-block;" />
+    </div>
     <p style="text-align:center;font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#888;margin:0 0 40px;">Order Confirmed</p>
 
     <h2 style="font-size:18px;font-weight:normal;border-bottom:1px solid #111;padding-bottom:10px;margin-bottom:16px;">
