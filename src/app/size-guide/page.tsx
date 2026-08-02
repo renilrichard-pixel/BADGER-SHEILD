@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Ruler } from 'lucide-react';
 import defaultSizeCharts from '@/data/size-charts.json';
@@ -65,28 +65,9 @@ function ShirtSvg({ highlight }: { highlight: 'chest' | 'length' | 'shoulder' | 
 }
 
 export default function SizeGuidePage() {
-  const [sizeCharts, setSizeCharts] = useState<SizeChartsData>(defaultSizeCharts as SizeChartsData);
+  const sizeCharts = defaultSizeCharts as SizeChartsData;
   const [activeTab, setActiveTab] = useState<string>('oversized-t-shirts');
   const [unit, setUnit] = useState<'in' | 'cm'>('in');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchSizeCharts() {
-      try {
-        const response = await fetch('/api/admin/settings');
-        if (response.ok) {
-          const data = await response.json();
-          if (data && !data.error) {
-            setSizeCharts(data);
-          }
-        }
-      } catch {
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchSizeCharts();
-  }, []);
 
   const activeChart = sizeCharts[activeTab] || sizeCharts['oversized-t-shirts'] || Object.values(sizeCharts)[0];
 
@@ -229,7 +210,7 @@ export default function SizeGuidePage() {
           </div>
         ) : (
           <div className="text-center py-20 border border-dashed border-border text-muted-foreground">
-            {loading ? 'Retrieving size guides...' : 'No size charts configuration found.'}
+            No size charts configuration found.
           </div>
         )}
 

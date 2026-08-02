@@ -31,8 +31,14 @@ interface Address {
 
 const ACTIVE_KEY = 'bs_active_payment';
 
-function saveActive(d: object) { try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(d)); } catch {} }
-function readActive() { try { const r = localStorage.getItem(ACTIVE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
+interface ActivePayment {
+  orderId?: string;
+  razorpayOrderId?: string;
+  cartIds?: string[];
+}
+
+function saveActive(d: ActivePayment) { try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(d)); } catch {} }
+function readActive(): ActivePayment | null { try { const r = localStorage.getItem(ACTIVE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function clearActive() { try { localStorage.removeItem(ACTIVE_KEY); } catch {} }
 
 export default function CheckoutPage() {
@@ -47,7 +53,7 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [rzpReady, setRzpReady] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
-  const [activeRzpOrderId, setActiveRzpOrderId] = useState<string | null>(null);
+  const [activeCartIds, setActiveCartIds] = useState<string[]>([]);
   const [polling, setPolling] = useState(false);
   const finalizing = useRef(false);
 
@@ -89,7 +95,7 @@ export default function CheckoutPage() {
     const ap = readActive();
     if (ap?.orderId) {
       setActiveOrderId(ap.orderId);
-      setActiveRzpOrderId(ap.razorpayOrderId ?? null);
+      setActiveCartIds(Array.isArray(ap.cartIds) ? ap.cartIds : []);
       setPolling(true);
       setIsProcessing(true);
       toast.loading('Checking payment status…', { id: 'pay-verify' });
@@ -113,10 +119,10 @@ export default function CheckoutPage() {
           setPolling(false);
           setIsProcessing(false);
           setActiveOrderId(null);
-          setActiveRzpOrderId(null);
           localStorage.setItem('lastOrder', JSON.stringify(order));
           toast.success('Payment confirmed!', { id: 'pay-verify' });
-          await removeMultipleFromCart(selectedItems.map(i => i.cartId));
+          const cartIdsToRemove = activeCartIds.length > 0 ? activeCartIds : selectedItems.map(i => i.cartId);
+          await removeMultipleFromCart(cartIdsToRemove);
           router.replace('/order-confirmation');
         }
       } catch { /* retry next tick */ }
@@ -128,7 +134,8 @@ export default function CheckoutPage() {
       clearInterval(timer);
       if (isProcessing) {
         clearActive(); setPolling(false); setIsProcessing(false);
-        setActiveOrderId(null); setActiveRzpOrderId(null);
+        setActiveOrderId(null);
+        setActiveCartIds([]);
         toast.dismiss('pay-verify');
         toast.warning('Payment still pending — contact support if amount was deducted.');
       }
@@ -141,7 +148,8 @@ export default function CheckoutPage() {
   const resetCheckout = useCallback(() => {
     clearActive(); finalizing.current = false;
     setIsProcessing(false); setPolling(false);
-    setActiveOrderId(null); setActiveRzpOrderId(null);
+    setActiveOrderId(null);
+    setActiveCartIds([]);
     toast.dismiss('pay-verify');
     toast.success('Reset. You can try again.');
   }, []);
@@ -150,6 +158,10 @@ export default function CheckoutPage() {
   const launchRazorpay = useCallback(async () => {
     if (!window.Razorpay) { toast.error('Payment SDK not ready. Refresh and try again.'); return; }
     if (!selectedAddr) { toast.error('Select a delivery address first.'); return; }
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+      toast.error('Razorpay public key not configured. Add NEXT_PUBLIC_RAZORPAY_KEY_ID to your env file.');
+      return;
+    }
 
     const addr = addresses.find(a => a.id === selectedAddr);
     if (!addr) return;
@@ -189,6 +201,7 @@ export default function CheckoutPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         items: selectedItems.map(i => ({
+          cartId: i.cartId,
           productId: i.productId,
           name: i.name,
           quantity: i.quantity,
@@ -204,7 +217,7 @@ export default function CheckoutPage() {
       const err = await rzpRes?.json().catch(() => ({}));
       const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       if (!keyId) {
-        toast.error('Razorpay keys not configured. Add RAZORPAY_KEY_ID to .env.local');
+        toast.error('Razorpay public key not configured. Add NEXT_PUBLIC_RAZORPAY_KEY_ID to your env file.');
       } else {
         toast.error(err?.error ?? 'Could not create payment order. Try again.');
       }
@@ -212,13 +225,24 @@ export default function CheckoutPage() {
       return;
     }
 
-    const { order: rzpOrder, orderId: serverOrderId } = await rzpRes.json();
-    const orderId = serverOrderId;
+    const createData = await rzpRes.json();
+    const rzpOrder = createData.order ?? {
+      id: createData.order_id,
+      amount: createData.amount,
+      currency: createData.currency,
+    };
+    const orderId = createData.orderId;
+    const purchasedCartIds = selectedItems.map(i => i.cartId);
 
-    saveActive({ orderId, razorpayOrderId: rzpOrder.id });
+    if (!rzpOrder?.id || !orderId) {
+      toast.error('Payment order response was incomplete. Try again.');
+      setIsProcessing(false);
+      return;
+    }
+
+    saveActive({ orderId, razorpayOrderId: rzpOrder.id, cartIds: purchasedCartIds });
     setActiveOrderId(orderId);
-    setActiveRzpOrderId(rzpOrder.id);
-    setActiveRzpOrderId(rzpOrder.id);
+    setActiveCartIds(purchasedCartIds);
 
     /* 4 — Open modal */
     const rzp = new window.Razorpay({
@@ -267,7 +291,7 @@ export default function CheckoutPage() {
           clearActive();
           localStorage.setItem('lastOrder', JSON.stringify(verifyData.order));
           toast.success('Payment successful!');
-          await removeMultipleFromCart(selectedItems.map(i => i.cartId));
+          await removeMultipleFromCart(purchasedCartIds);
           router.replace('/order-confirmation');
         } else {
           toast.error('Order verification failed or incomplete. Contact support.');
@@ -279,8 +303,12 @@ export default function CheckoutPage() {
         escape: false,
         ondismiss: () => {
           if (finalizing.current) return;
-          setPolling(true);
-          toast.loading('Checking payment status…', { id: 'pay-verify' });
+          clearActive();
+          setIsProcessing(false);
+          setPolling(false);
+          setActiveOrderId(null);
+          setActiveCartIds([]);
+          toast.info('Payment cancelled. You can try again.');
         },
       },
     });
@@ -288,12 +316,13 @@ export default function CheckoutPage() {
     rzp.on('payment.failed', (r: any) => {
       finalizing.current = false;
       clearActive(); setIsProcessing(false); setPolling(false);
-      setActiveOrderId(null); setActiveRzpOrderId(null);
+      setActiveOrderId(null);
+      setActiveCartIds([]);
       toast.error(r?.error?.description ?? 'Payment failed.');
     });
 
     rzp.open();
-  }, [selectedAddr, addresses, selectedItems, total, subtotal, shipping, payMethod, user, removeItem, updateQuantity, removeMultipleFromCart, router]);
+  }, [selectedAddr, addresses, selectedItems, payMethod, user, removeItem, updateQuantity, removeMultipleFromCart, router]);
 
   /* ── Guards ── */
   if (isLoading) return (
@@ -324,7 +353,11 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" onLoad={() => setRzpReady(true)} />
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        onLoad={() => setRzpReady(true)}
+        onError={() => toast.error('Could not load Razorpay checkout. Refresh and try again.')}
+      />
 
       <div className="min-h-screen pb-28 md:pb-0">
         <div className="max-w-6xl mx-auto px-4 py-8 md:py-14">

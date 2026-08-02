@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['172.28.119.195'],
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
@@ -18,5 +17,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-// Force dev server reload to pick up nodemailer
-

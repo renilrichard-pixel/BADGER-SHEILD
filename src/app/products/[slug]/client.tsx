@@ -82,7 +82,7 @@ export default function ProductClient({ product }: { product: Product }) {
   const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0]?.name || '');
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [sizeCharts, setSizeCharts] = useState<SizeChartsData>(defaultSizeCharts as SizeChartsData);
+  const sizeCharts = defaultSizeCharts as SizeChartsData;
   const [unit, setUnit] = useState<'in' | 'cm'>('in');
   const [openAccordion, setOpenAccordion] = useState<string>('description');
   const [isWishlisted, setIsWishlisted] = useState(() => wishlistStore.hasItem(product._id || ''));
@@ -121,20 +121,6 @@ export default function ProductClient({ product }: { product: Product }) {
       setExperienceInput(existingReview.experience || '');
     }
   }, [existingReview, isEditing]);
-
-  useEffect(() => {
-    async function fetchCharts() {
-      try {
-        const res = await fetch('/api/admin/settings');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && !data.error) setSizeCharts(data);
-        }
-      } catch {
-      }
-    }
-    fetchCharts();
-  }, []);
 
   useEffect(() => {
     return wishlistStore.subscribe(() => {

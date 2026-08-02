@@ -14,6 +14,7 @@ const writeClient = createSanityClient({
 });
 
 interface CheckoutItem {
+  cartId?: string;
   productId: string;
   name: string;
   quantity: number;
@@ -69,7 +70,7 @@ function validateCreatePayload(body: any): string | null {
       return `Item at index ${i} must be a JSON object`;
     }
     
-    const allowedItemKeys = ['productId', 'name', 'quantity', 'selectedSize', 'selectedColor'];
+    const allowedItemKeys = ['cartId', 'productId', 'name', 'quantity', 'selectedSize', 'selectedColor'];
     const itemKeys = Object.keys(item);
     for (const key of itemKeys) {
       if (!allowedItemKeys.includes(key)) {
@@ -79,6 +80,9 @@ function validateCreatePayload(body: any): string | null {
 
     if (typeof item.productId !== 'string' || item.productId.trim() === '') {
       return `Invalid or missing productId in item at index ${i}`;
+    }
+    if (item.cartId !== undefined && (typeof item.cartId !== 'string' || item.cartId.trim() === '')) {
+      return `Invalid cartId in item at index ${i}`;
     }
     if (typeof item.name !== 'string' || item.name.trim() === '') {
       return `Invalid or missing name in item at index ${i}`;
@@ -130,6 +134,12 @@ function generateOrderId(): string {
   const dd = String(today.getDate()).padStart(2, '0');
   const hex = crypto.randomBytes(4).toString('hex').toUpperCase();
   return `BS-${yyyy}${mm}${dd}-${hex}`;
+}
+
+function isRazorpayAuthError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const gatewayError = error as { statusCode?: unknown; status_code?: unknown };
+  return gatewayError.statusCode === 401 || gatewayError.status_code === 401;
 }
 
 export async function POST(request: Request) {
@@ -236,6 +246,7 @@ export async function POST(request: Request) {
       serverSubtotal += activePrice * item.quantity;
 
       itemsDetail.push({
+        cartId: item.cartId || `${item.productId}-${item.selectedSize}-${item.selectedColor}`,
         productId: item.productId,
         name: dbProduct.name,
         quantity: item.quantity,
@@ -247,6 +258,12 @@ export async function POST(request: Request) {
 
     const serverShipping = serverSubtotal > 5000 ? 0 : 250;
     const serverTotal = serverSubtotal + serverShipping;
+    const amountInPaise = Math.round(serverTotal * 100);
+
+    if (amountInPaise < 100) {
+      logEvent('WARN', 'Invalid Client Payload', { reason: 'Order amount below Razorpay minimum', amountInPaise });
+      return NextResponse.json({ error: 'Order amount must be at least ₹1.00.' }, { status: 400 });
+    }
 
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -289,6 +306,9 @@ export async function POST(request: Request) {
           logEvent('INFO', 'Pending Order Reused', { orderId: matchedOrder.order_id, razorpayOrderId: matchedOrder.razorpay_order_id });
           return NextResponse.json({
             order: rzpOrder,
+            order_id: rzpOrder.id,
+            amount: rzpOrder.amount,
+            currency: rzpOrder.currency,
             orderId: matchedOrder.order_id,
             subtotal: matchedOrder.subtotal,
             shipping: matchedOrder.shipping_fee,
@@ -345,7 +365,7 @@ export async function POST(request: Request) {
     let rzpOrder;
     try {
       rzpOrder = await rzp.orders.create({
-        amount: Math.round(serverTotal * 100),
+        amount: amountInPaise,
         currency: 'INR',
         receipt: orderId,
       });
@@ -354,7 +374,11 @@ export async function POST(request: Request) {
       logEvent('ERROR', 'Razorpay Failure', { error: rzpErr?.message || 'Razorpay creation failed', orderId });
       // Rollback database insertion if Razorpay order creation fails
       await (supabaseAdmin as any).from('orders').delete().eq('order_id', orderId);
-      return NextResponse.json({ error: 'Payment gateway order creation failed. Checkout rolled back.' }, { status: 500 });
+      const status = isRazorpayAuthError(rzpErr) ? 401 : 500;
+      const message = status === 401
+        ? 'Payment gateway authentication failed.'
+        : 'Payment gateway order creation failed. Checkout rolled back.';
+      return NextResponse.json({ error: message }, { status });
     }
 
     // 7. Update pending database order with Razorpay order ID
@@ -375,6 +399,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       order: rzpOrder,
+      order_id: rzpOrder.id,
+      amount: rzpOrder.amount,
+      currency: rzpOrder.currency,
       orderId,
       subtotal: serverSubtotal,
       shipping: serverShipping,

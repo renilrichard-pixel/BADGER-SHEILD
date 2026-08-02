@@ -28,17 +28,22 @@ interface OrderRow {
   updated_at: string;
 }
 
+export interface OrderConfirmationResult {
+  order: OrderRow;
+  confirmedNow: boolean;
+}
+
 /**
  * Marks an order as confirmed and updates payment details.
  * Uses an optimistic lock via status check to prevent double-confirm.
  */
-export async function confirmOrderWithStock(
+export async function confirmOrderWithStockResult(
   supabaseAdmin: SupabaseClient,
   order: OrderRow,
   razorpay_payment_id: string
-): Promise<OrderRow> {
+): Promise<OrderConfirmationResult> {
   if (order.status === 'confirmed') {
-    return order; // Already confirmed — idempotent
+    return { order, confirmedNow: false }; // Already confirmed — idempotent
   }
   // Update status directly from pending to confirmed.
   // Using .eq('status', 'pending') acts as an optimistic lock.
@@ -64,7 +69,7 @@ export async function confirmOrderWithStock(
         .eq('order_id', order.order_id)
         .single();
       if (updatedOrder && updatedOrder.status === 'confirmed') {
-        return updatedOrder as OrderRow;
+        return { order: updatedOrder as OrderRow, confirmedNow: false };
       }
     }
     throw new Error(confirmError.message || 'Failed to confirm order');
@@ -90,5 +95,14 @@ export async function confirmOrderWithStock(
     }
   }
 
-  return confirmed as OrderRow;
+  return { order: confirmed as OrderRow, confirmedNow: true };
+}
+
+export async function confirmOrderWithStock(
+  supabaseAdmin: SupabaseClient,
+  order: OrderRow,
+  razorpay_payment_id: string
+): Promise<OrderRow> {
+  const result = await confirmOrderWithStockResult(supabaseAdmin, order, razorpay_payment_id);
+  return result.order;
 }

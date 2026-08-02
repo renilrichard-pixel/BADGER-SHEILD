@@ -25,9 +25,8 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect Admin and Checkout routes
+  // Protect Checkout routes
   if (
-    request.nextUrl.pathname.startsWith('/admin') ||
     request.nextUrl.pathname.startsWith('/checkout')
   ) {
     if (!user) {
