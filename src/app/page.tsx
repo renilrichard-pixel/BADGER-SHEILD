@@ -11,6 +11,7 @@ import type { Metadata } from 'next';
 
 export const revalidate = 300; // Incremental Static Regeneration: revalidate every 5 minutes
 
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://badgersheild.com'),
   title: 'BADGER SHEILD | Premium Menswear & Luxury T-Shirts',
