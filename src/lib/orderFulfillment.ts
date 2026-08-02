@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from 'next-sanity';
 import { apiVersion, dataset, projectId } from '@/sanity/env';
+import { hasSizeStock, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
 
 const writeClient = createClient({
   projectId,
@@ -26,6 +27,12 @@ interface OrderRow {
   customer_info: any;
   created_at: string;
   updated_at: string;
+}
+
+interface FulfillmentItem {
+  productId?: string;
+  quantity?: number;
+  selectedSize?: string;
 }
 
 export interface OrderConfirmationResult {
@@ -83,11 +90,45 @@ export async function confirmOrderWithStockResult(
   // decrement the stock in Sanity
   if (confirmed.items && Array.isArray(confirmed.items)) {
     try {
+      const confirmedItems = confirmed.items as FulfillmentItem[];
+      const itemsWithProducts = confirmedItems.filter((item) => item.productId && item.quantity);
+      const productIds = Array.from(new Set(itemsWithProducts.map((item) => item.productId)));
+      const products = await writeClient.fetch<Array<{
+        _id: string;
+        stock?: number;
+        sizeStock?: SizeStockEntry[];
+      }>>(
+        `*[_id in $productIds] { _id, stock, sizeStock[] { _key, size, quantity } }`,
+        { productIds }
+      );
+
       const transaction = writeClient.transaction();
-      for (const item of confirmed.items) {
-        if (item.productId && item.quantity) {
-          transaction.patch(item.productId, (p) => p.dec({ stock: item.quantity }));
-        }
+      for (const product of products) {
+        const productItems = itemsWithProducts.filter((item) => item.productId === product._id);
+        const totalQuantity = productItems.reduce((total, item) => total + Number(item.quantity || 0), 0);
+
+        if (totalQuantity <= 0) continue;
+
+        transaction.patch(product._id, (p) => {
+          if (hasSizeStock(product.sizeStock)) {
+            const nextSizeStock = (product.sizeStock ?? []).map((entry) => {
+              const sizeQuantity = productItems
+                .filter((item) => normalizeSize(item.selectedSize) === normalizeSize(entry.size))
+                .reduce((total, item) => total + Number(item.quantity || 0), 0);
+
+              if (sizeQuantity <= 0) return entry;
+
+              return {
+                ...entry,
+                quantity: Math.max(0, Number(entry.quantity || 0) - sizeQuantity),
+              };
+            });
+
+            return p.set({ sizeStock: nextSizeStock });
+          }
+
+          return p.dec({ stock: totalQuantity });
+        });
       }
       await transaction.commit();
     } catch (sanityErr: any) {

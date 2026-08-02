@@ -8,8 +8,9 @@ import { ProductCard } from '@/components/product-card';
 import type { SanityImageSource } from '@sanity/image-url';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import type { SizeStockEntry } from '@/lib/sizeStock';
 
-export const revalidate = 300; // Incremental Static Regeneration: revalidate every 5 minutes
+export const revalidate = 0;
 
 
 export const metadata: Metadata = {
@@ -68,6 +69,7 @@ interface HomeProduct {
   colors?: string[];
   colorHexes?: string[];
   sizes?: string[];
+  sizeStock?: SizeStockEntry[];
   stockQty?: number;
   rating?: number;
 }
@@ -103,31 +105,19 @@ const jsonLd = {
 
 async function getFeaturedProducts(): Promise<HomeProduct[]> {
   try {
-    let data = await client.fetch<HomeProduct[]>(`
-      *[_type == "product" && newArrival == true && category->slug.current != "joggers"] | order(_createdAt desc)[0...8] {
+    const data = await client.fetch<HomeProduct[]>(`
+      *[_type == "product" && active != false && category->slug.current != "joggers"] | order(_createdAt desc)[0...8] {
         _id, name, slug, price, salePrice, image, images, rating,
         newArrival, bestSeller,
         "colors": colors[].name,
         "colorHexes": colors[].hex,
         "sizes": sizes,
+        "sizeStock": sizeStock[] { size, quantity },
         "categoryName": category->name,
         "stockQty": stock
       }
-    `, {}, { next: { revalidate: 300 } });
+    `, {}, { next: { revalidate: 0 } });
 
-    if (!data || data.length === 0) {
-      data = await client.fetch<HomeProduct[]>(`
-        *[_type == "product" && active != false && category->slug.current != "joggers"] | order(_createdAt desc)[0...8] {
-          _id, name, slug, price, salePrice, image, images, rating,
-          newArrival, bestSeller,
-          "colors": colors[].name,
-          "colorHexes": colors[].hex,
-          "sizes": sizes,
-          "categoryName": category->name,
-          "stockQty": stock
-        }
-      `, {}, { next: { revalidate: 300 } });
-    }
     return data || [];
   } catch (error) {
     console.error("Failed to fetch featured products on server:", error);
@@ -172,6 +162,7 @@ async function NewArrivalsProducts() {
             colors={product.colors}
             colorHexes={product.colorHexes}
             sizes={product.sizes}
+            sizeStock={product.sizeStock}
             stockQty={product.stockQty}
             priority={index < 4} // First row gets priority preload to optimize FCP/LCP
             averageRating={averageRating}
@@ -188,7 +179,7 @@ function ProductGridSkeleton() {
     <div className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="flex flex-col gap-4 animate-pulse" aria-hidden="true">
-          <div className="aspect-[4/5] bg-muted w-full" />
+          <div className="aspect-4/5 bg-muted w-full" />
           <div className="space-y-2">
             <div className="h-3 bg-muted w-1/3" />
             <div className="h-4 bg-muted w-3/4" />

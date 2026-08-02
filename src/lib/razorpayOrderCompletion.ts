@@ -3,6 +3,7 @@ import { createClient as createSanityClient } from 'next-sanity';
 import { apiVersion, dataset, projectId } from '@/sanity/env';
 import { confirmOrderWithStockResult } from '@/lib/orderFulfillment';
 import { sendOrderEmails } from '@/lib/orderEmail';
+import { getSizeStockQuantity, type SizeStockEntry } from '@/lib/sizeStock';
 
 const sanityClient = createSanityClient({
   projectId,
@@ -72,18 +73,18 @@ async function removePurchasedItemsFromCart(
 async function validateStock(order: CompletionOrder) {
   const items = order.items || [];
   const productIds = items.map((i: any) => i.productId);
-  const dbProducts = await sanityClient.fetch<Array<{ _id: string; name: string; stock?: number }>>(
-    `*[_id in $productIds] { _id, name, stock }`,
+  const dbProducts = await sanityClient.fetch<Array<{ _id: string; name: string; stock?: number; sizeStock?: SizeStockEntry[] }>>(
+    `*[_id in $productIds] { _id, name, stock, sizeStock[] { size, quantity } }`,
     { productIds }
   );
 
   for (const item of items) {
     const dbProduct = dbProducts.find((p: any) => p._id === item.productId);
-    const availableStock = typeof dbProduct?.stock === 'number' ? dbProduct.stock : 0;
+    const availableStock = getSizeStockQuantity(dbProduct?.sizeStock, item.selectedSize, dbProduct?.stock);
 
     if (availableStock < item.quantity) {
       throw new PaymentCompletionError(
-        `Fulfillment failed: Insufficient stock for product "${dbProduct?.name || item.name}".`,
+        `Fulfillment failed: Insufficient stock for product "${dbProduct?.name || item.name}" in size "${item.selectedSize}".`,
         400
       );
     }

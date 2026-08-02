@@ -5,7 +5,41 @@ import { ProductControls } from '@/components/product-controls';
 import { ProductCard } from '@/components/product-card';
 import type { SanityImageSource } from '@sanity/image-url';
 import { notFound } from 'next/navigation';
+import type { SizeStockEntry } from '@/lib/sizeStock';
 export const revalidate = 0;
+
+type SanityProduct = {
+  _id: string;
+  name: string;
+  slug?: { current: string };
+  price: number;
+  salePrice?: number;
+  image?: SanityImageSource;
+  images?: SanityImageSource[];
+  rating?: number;
+  newArrival?: boolean;
+  bestSeller?: boolean;
+  colors?: string[];
+  colorHexes?: string[];
+  sizes?: string[];
+  sizeStock?: SizeStockEntry[];
+  stockQty?: number;
+  categorySlug?: string;
+  categoryName?: string;
+};
+
+const productFields = `
+  _id, name, slug, price, salePrice,
+  image, images, rating,
+  newArrival, bestSeller,
+  "colors": colors[].name,
+  "colorHexes": colors[].hex,
+  "sizes": sizes,
+  "sizeStock": sizeStock[] { size, quantity },
+  "categorySlug": category->slug.current,
+  "categoryName": category->name,
+  "stockQty": stock
+`;
 
 export default async function ProductsPage({
   searchParams,
@@ -42,39 +76,41 @@ export default async function ProductsPage({
   if (sort === 'name') sortClause = '| order(name asc)';
 
   productsQuery += `] ${sortClause} {
-    _id, name, slug, price, salePrice,
-    image, images, rating,
-    newArrival, bestSeller,
-    "colors": colors[].name,
-    "colorHexes": colors[].hex,
-    "sizes": sizes,
-    "categorySlug": category->slug.current,
-    "categoryName": category->name,
-    "stockQty": stock
+    ${productFields}
   }`;
 
   const [products, aggregates] = await Promise.all([
-    client.fetch(productsQuery, queryParams),
+    client.fetch<SanityProduct[]>(productsQuery, queryParams, { next: { revalidate: 0 } }),
     import('@/lib/reviews').then(m => m.getCachedReviewAggregates())
   ]);
 
-  type SanityProduct = {
-    _id: string;
-    name: string;
-    slug: { current: string };
-    price: number;
-    salePrice?: number;
-    image?: SanityImageSource;
-    images?: SanityImageSource[];
-    rating?: number;
-    newArrival?: boolean;
-    bestSeller?: boolean;
-    colors?: string[];
-    colorHexes?: string[];
-    sizes?: string[];
-    stockQty?: number;
-    categorySlug?: string;
-    categoryName?: string;
+  const renderProductCard = (product: SanityProduct) => {
+    const agg = aggregates[product._id];
+    const averageRating = agg && agg.reviewCount > 0 ? agg.averageRating : (product.rating ?? 0);
+    const reviewCount = agg ? agg.reviewCount : 0;
+
+    return (
+      <ProductCard
+        key={product._id}
+        id={product._id}
+        name={product.name}
+        slug={product.slug?.current || ''}
+        price={product.price}
+        salePrice={product.salePrice}
+        image={product.image}
+        images={product.images}
+        newArrival={product.newArrival}
+        bestSeller={product.bestSeller}
+        colors={product.colors}
+        colorHexes={product.colorHexes}
+        sizes={product.sizes}
+        sizeStock={product.sizeStock}
+        stockQty={product.stockQty}
+        categoryName={product.categoryName || product.categorySlug?.replace(/-/g, ' ')}
+        averageRating={averageRating}
+        reviewCount={reviewCount}
+      />
+    );
   };
 
   return (
@@ -106,33 +142,7 @@ export default async function ProductsPage({
             <>
               {/* Dense grid layout to reduce card sizes */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
-                {products.map((product: SanityProduct) => {
-                  const agg = aggregates[product._id];
-                  const averageRating = agg && agg.reviewCount > 0 ? agg.averageRating : (product.rating ?? 0);
-                  const reviewCount = agg ? agg.reviewCount : 0;
-
-                  return (
-                    <ProductCard
-                      key={product._id}
-                      id={product._id}
-                      name={product.name}
-                      slug={product.slug?.current || ''}
-                      price={product.price}
-                      salePrice={product.salePrice}
-                      image={product.image}
-                      images={product.images}
-                      newArrival={product.newArrival}
-                      bestSeller={product.bestSeller}
-                      colors={product.colors}
-                      colorHexes={product.colorHexes}
-                      sizes={product.sizes}
-                      stockQty={product.stockQty}
-                      categoryName={product.categoryName || product.categorySlug?.replace(/-/g, ' ')}
-                      averageRating={averageRating}
-                      reviewCount={reviewCount}
-                    />
-                  );
-                })}
+                {products.map(renderProductCard)}
               </div>
 
               {products.length >= 20 && (

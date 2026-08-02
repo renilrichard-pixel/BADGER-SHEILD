@@ -3,6 +3,7 @@ import { createClient as createSanityClient } from 'next-sanity';
 import { apiVersion, dataset, projectId } from '@/sanity/env';
 import { createClient as createSupabaseServer } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
 import crypto from 'crypto';
 
 const writeClient = createSanityClient({
@@ -236,8 +237,9 @@ export async function POST(request: Request) {
       colors?: Array<{ name: string }>;
       active?: boolean;
       stock?: number;
+      sizeStock?: SizeStockEntry[];
     }>>(
-      `*[_id in $productIds] { _id, name, price, salePrice, sizes, colors, active, stock }`,
+      `*[_id in $productIds] { _id, name, price, salePrice, sizes, colors, active, stock, sizeStock[] { size, quantity } }`,
       { productIds }
     );
 
@@ -256,7 +258,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Product "${dbProduct.name}" is not currently available.` }, { status: 400 });
       }
 
-      if (!dbProduct.sizes || !dbProduct.sizes.includes(item.selectedSize)) {
+      const selectedSize = normalizeSize(item.selectedSize);
+      const canonicalSize = dbProduct.sizes?.find((size) => normalizeSize(size) === selectedSize);
+      if (!canonicalSize) {
         logEvent('WARN', 'Invalid Client Payload', { reason: 'Size not available', productId: item.productId, size: item.selectedSize });
         return NextResponse.json({ error: `Size "${item.selectedSize}" is not available for product "${dbProduct.name}".` }, { status: 400 });
       }
@@ -281,21 +285,21 @@ export async function POST(request: Request) {
         }
       }
 
-      const availableStock = typeof dbProduct.stock === 'number' ? dbProduct.stock : 0;
+      const availableStock = getSizeStockQuantity(dbProduct.sizeStock, canonicalSize, dbProduct.stock);
       if (availableStock < item.quantity) {
         logEvent('ERROR', 'Stock Validation Failure', { reason: 'Insufficient stock', productId: item.productId, requested: item.quantity, available: availableStock });
-        return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name}". Available: ${availableStock}.` }, { status: 400 });
+        return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name}" in size "${canonicalSize}". Available: ${availableStock}.` }, { status: 400 });
       }
 
       const activePrice = (dbProduct.salePrice !== undefined && dbProduct.salePrice !== null) ? dbProduct.salePrice : dbProduct.price;
       serverSubtotal += activePrice * item.quantity;
 
       itemsDetail.push({
-        cartId: item.cartId || `${item.productId}-${item.selectedSize}-${selectedColor}`,
+        cartId: item.cartId || `${item.productId}-${canonicalSize}-${selectedColor}`,
         productId: item.productId,
         name: dbProduct.name,
         quantity: item.quantity,
-        selectedSize: item.selectedSize,
+        selectedSize: canonicalSize,
         selectedColor,
         price: activePrice,
       });

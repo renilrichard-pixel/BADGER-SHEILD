@@ -124,14 +124,14 @@ export function MobileNavbarLinks({ categories, onClose }: NavbarLinksProps) {
               alt="BADGER SHEILD Logo"
               width={1264}
               height={96}
-              className="h-[20px] sm:h-[24px] w-auto object-contain dark:hidden"
+              className="h-5 sm:h-6 w-auto object-contain dark:hidden"
             />
             <Image
               src="/assets/images/logo-light.png"
               alt="BADGER SHEILD Logo"
               width={1264}
               height={96}
-              className="h-[20px] sm:h-[24px] w-auto object-contain hidden dark:block"
+              className="h-5 sm:h-6 w-auto object-contain hidden dark:block"
             />
           </Link>
         </div>
@@ -302,7 +302,7 @@ export function UserDropdown({ email }: UserDropdownProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-52 border border-border bg-background shadow-xl z-[60] animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-52 border border-border bg-background shadow-xl z-60 animate-in fade-in slide-in-from-top-2 duration-150">
           {email ? (
             <>
               <div className="px-4 py-3 border-b border-border/60">

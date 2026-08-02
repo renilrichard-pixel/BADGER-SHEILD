@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from 'next-sanity';
 import { apiVersion, dataset, projectId } from '@/sanity/env';
+import { getSizeStockQuantity, type SizeStockEntry } from '@/lib/sizeStock';
 
 const writeClient = createClient({
   projectId,
@@ -15,12 +16,14 @@ interface CheckoutItem {
   cartId: string;
   name: string;
   quantity: number;
+  selectedSize: string;
 }
 
 interface StockProduct {
   _id: string;
   name: string;
   stock?: number;
+  sizeStock?: SizeStockEntry[];
 }
 
 interface StockError {
@@ -67,7 +70,7 @@ function validateStockPayload(body: any): string | null {
       return `Item at index ${i} must be a JSON object`;
     }
 
-    const allowedItemKeys = ['productId', 'cartId', 'name', 'quantity'];
+    const allowedItemKeys = ['productId', 'cartId', 'name', 'quantity', 'selectedSize'];
     const itemKeys = Object.keys(item);
     for (const key of itemKeys) {
       if (!allowedItemKeys.includes(key)) {
@@ -86,6 +89,9 @@ function validateStockPayload(body: any): string | null {
     }
     if (typeof item.quantity !== 'number' || !Number.isInteger(item.quantity) || item.quantity <= 0) {
       return `Invalid or missing quantity in item at index ${i} (must be integer > 0)`;
+    }
+    if (typeof item.selectedSize !== 'string' || item.selectedSize.trim() === '') {
+      return `Invalid or missing selectedSize in item at index ${i}`;
     }
   }
 
@@ -113,7 +119,7 @@ export async function POST(request: Request) {
     const productIds = items.map((item) => item.productId);
 
     const dbProducts = await writeClient.fetch<StockProduct[]>(
-      `*[_id in $productIds] { _id, name, stock }`,
+      `*[_id in $productIds] { _id, name, stock, sizeStock[] { size, quantity } }`,
       { productIds }
     );
 
@@ -130,14 +136,16 @@ export async function POST(request: Request) {
           reason: 'Product no longer exists',
         });
       } else {
-        const availableStock = typeof dbProduct.stock === 'number' ? dbProduct.stock : 0;
+        const availableStock = getSizeStockQuantity(dbProduct.sizeStock, item.selectedSize, dbProduct.stock);
         if (availableStock < item.quantity) {
           stockErrors.push({
             productId: item.productId,
             cartId: item.cartId,
             name: dbProduct.name,
             available: availableStock,
-            reason: availableStock === 0 ? 'Out of stock' : `Only ${availableStock} units left`,
+            reason: availableStock === 0
+              ? `Size ${item.selectedSize} is out of stock`
+              : `Only ${availableStock} units left in size ${item.selectedSize}`,
           });
         }
       }

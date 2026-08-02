@@ -179,6 +179,7 @@ export default function CheckoutPage() {
           cartId: i.cartId,
           name: i.name,
           quantity: i.quantity,
+          selectedSize: i.selectedSize,
         })),
       }),
     }).catch(() => null);
@@ -414,9 +415,9 @@ export default function CheckoutPage() {
                         type="button"
                         onClick={() => setSelectedAddr(addr.id)}
                         className={`w-full text-left flex items-start gap-4 p-4 border transition-all duration-150
-                          ${selectedAddr === addr.id ? 'border-foreground bg-foreground/[0.03]' : 'border-border/50 hover:border-border'}`}
+                          ${selectedAddr === addr.id ? 'border-foreground bg-foreground/3' : 'border-border/50 hover:border-border'}`}
                       >
-                        <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                        <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center
                           ${selectedAddr === addr.id ? 'border-foreground' : 'border-border'}`}>
                           {selectedAddr === addr.id && <span className="w-2 h-2 rounded-full bg-foreground block" />}
                         </span>
@@ -482,7 +483,7 @@ export default function CheckoutPage() {
                 <div className="p-5 space-y-4 max-h-64 overflow-y-auto">
                   {selectedItems.map(item => (
                     <div key={item.cartId} className="flex gap-3">
-                      <div className="w-14 h-18 bg-muted flex-shrink-0 relative overflow-hidden" style={{ minHeight: '3.5rem' }}>
+                      <div className="w-14 h-18 bg-muted shrink-0 relative overflow-hidden" style={{ minHeight: '3.5rem' }}>
                         {item.image
                           ? <Image
                               src={item.image}

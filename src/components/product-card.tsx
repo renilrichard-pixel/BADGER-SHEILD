@@ -6,6 +6,7 @@ import { WishlistButton } from '@/components/wishlist-button';
 import { QuickAdd } from '@/components/quick-add';
 import { urlFor } from '@/sanity/lib/image';
 import type { SanityImageSource } from '@sanity/image-url';
+import { getTotalStock, type SizeStockEntry } from '@/lib/sizeStock';
 
 interface ProductCardProps {
   id: string;
@@ -20,6 +21,7 @@ interface ProductCardProps {
   colors?: string[] | null;
   colorHexes?: string[] | null;
   sizes?: string[] | null;
+  sizeStock?: SizeStockEntry[] | null;
   stockQty?: number;
   categoryName?: string;
   priority?: boolean;
@@ -49,6 +51,7 @@ export function ProductCard({
   colors,
   colorHexes,
   sizes,
+  sizeStock,
   stockQty = 99,
   categoryName,
   priority = false,
@@ -57,7 +60,7 @@ export function ProductCard({
 }: ProductCardProps) {
   const displayPrice = salePrice ?? price;
   const isOnSale = !!salePrice && salePrice < price;
-  const outOfStock = stockQty === 0;
+  const outOfStock = getTotalStock(sizeStock, stockQty) === 0;
 
   const primaryImage = image ?? images?.[0] ?? null;
   const secondaryImage = images?.[1] ?? null;
@@ -70,7 +73,7 @@ export function ProductCard({
   return (
     <div className="group flex flex-col justify-between h-full bg-card text-card-foreground">
       <div>
-        <div className="relative mb-3 aspect-[4/5] overflow-hidden bg-muted group/image border border-border/10">
+        <div className="relative mb-3 aspect-4/5 overflow-hidden bg-muted group/image border border-border/10">
           <Link href={`/products/${slug}`} className="block w-full h-full">
             {mainImageUrl ? (
               <Image
@@ -138,6 +141,7 @@ export function ProductCard({
             slug={slug}
             sizes={sizes}
             colors={colors}
+            sizeStock={sizeStock}
             stockQty={stockQty}
           />
         </div>

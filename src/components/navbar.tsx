@@ -21,7 +21,7 @@ export async function Navbar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 sm:gap-6">
           <Sheet>
@@ -29,7 +29,7 @@ export async function Navbar() {
               <Menu className="h-5 w-5" />
               <span className="sr-only">Toggle menu</span>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="left" className="w-75 sm:w-100">
               <MobileNavbarLinks categories={categories} />
             </SheetContent>
           </Sheet>
@@ -44,7 +44,7 @@ export async function Navbar() {
               width={1264}
               height={96}
               priority
-              className="h-[16px] min-[360px]:h-[18px] min-[375px]:h-[20px] min-[390px]:h-[22px] sm:h-[24px] md:h-[26px] lg:h-[30px] w-auto object-contain dark:hidden"
+              className="h-4 min-[360px]:h-4.5 min-[375px]:h-5 min-[390px]:h-5.5 sm:h-6 md:h-6.5 lg:h-7.5 w-auto object-contain dark:hidden"
             />
             <Image
               src="/assets/images/logo-light.png"
@@ -52,7 +52,7 @@ export async function Navbar() {
               width={1264}
               height={96}
               priority
-              className="h-[16px] min-[360px]:h-[18px] min-[375px]:h-[20px] min-[390px]:h-[22px] sm:h-[24px] md:h-[26px] lg:h-[30px] w-auto object-contain hidden dark:block"
+              className="h-4 min-[360px]:h-4.5 min-[375px]:h-5 min-[390px]:h-5.5 sm:h-6 md:h-6.5 lg:h-7.5 w-auto object-contain hidden dark:block"
             />
           </Link>
           <NavbarLinks categories={categories} />

@@ -7,6 +7,7 @@ import ProductClient from './client';
 import type { SanityImageSource } from '@sanity/image-url';
 import { getCachedProductReviewAggregate } from '@/lib/reviews';
 import { RatingsProvider } from '@/context/RatingsContext';
+import type { SizeStockEntry } from '@/lib/sizeStock';
 
 interface ProductData {
   _id: string;
@@ -16,6 +17,7 @@ interface ProductData {
   price: number;
   salePrice?: number;
   stock?: number;
+  sizeStock?: SizeStockEntry[];
   rating?: number;
   material?: string;
   sizes?: string[];
@@ -43,6 +45,7 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
       price,
       salePrice,
       stock,
+      sizeStock[] { size, quantity },
       rating,
       material,
       sizes,

@@ -19,6 +19,12 @@ import { wishlistStore } from '@/lib/wishlist-store';
 import { requireAuth } from '@/lib/require-auth';
 import { useRatings } from '@/context/RatingsContext';
 import { supabase } from '@/lib/supabaseClient';
+import {
+  getFirstAvailableSize,
+  getSizeStockQuantity,
+  getTotalStock,
+  type SizeStockEntry,
+} from '@/lib/sizeStock';
 
 interface SizeRow {
   size: string;
@@ -53,6 +59,7 @@ interface Product {
   colors?: SanityColor[];
   material?: string;
   stock?: number;
+  sizeStock?: SizeStockEntry[];
   rating?: number;
   categorySlug?: string;
   categoryName?: string;
@@ -71,6 +78,7 @@ const TRUST_BADGES = [
 export default function ProductClient({ product }: { product: Product }) {
   const { addItem } = useCart();
   const { ratings, getProductReviews, getUserReview, updateRating, deleteUserReview, loadProductReviews, isLoadingReviews, hasMoreReviews } = useRatings();
+  const defaultSelectedSize = getFirstAvailableSize(product.sizes, product.sizeStock, product.stock);
 
   useEffect(() => {
     if (product._id) {
@@ -78,7 +86,7 @@ export default function ProductClient({ product }: { product: Product }) {
     }
   }, [product._id]);
 
-  const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] || '');
+  const [selectedSize, setSelectedSize] = useState<string>(defaultSelectedSize);
   const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0]?.name || 'Default');
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -136,6 +144,13 @@ export default function ProductClient({ product }: { product: Product }) {
       return;
     }
 
+    if (stock <= 0) {
+      setSizeError(true);
+      toast.error(selectedSize ? `Size ${selectedSize} is out of stock` : 'Out of stock');
+      setTimeout(() => setSizeError(false), 2000);
+      return;
+    }
+
     addItem({
       productId: product._id || 'unknown',
       name: product.name || 'Product',
@@ -183,9 +198,11 @@ export default function ProductClient({ product }: { product: Product }) {
   };
 
   const images = product.images || [];
-  const stock = product.stock ?? 0;
+  const stock = getSizeStockQuantity(product.sizeStock, selectedSize, product.stock ?? 0);
+  const totalStock = getTotalStock(product.sizeStock, product.stock ?? 0);
   const isLowStock = stock > 0 && stock <= 5;
   const isOutOfStock = stock === 0;
+  const isProductOutOfStock = totalStock === 0;
   const displayPrice = product.salePrice ?? product.price;
   const isOnSale = !!product.salePrice && product.salePrice < product.price;
   
@@ -202,6 +219,10 @@ export default function ProductClient({ product }: { product: Product }) {
 
   const { items } = useCart();
   const isAdded = items.some(item => item.productId === product._id);
+
+  useEffect(() => {
+    setQuantity((currentQuantity) => Math.min(currentQuantity, Math.max(stock, 1)));
+  }, [stock]);
 
   return (
     <div className="min-h-screen">
@@ -248,7 +269,7 @@ export default function ProductClient({ product }: { product: Product }) {
               )}
 
               {/* Status Badge overlay (ONLY out of stock) */}
-              {isOutOfStock && (
+              {isProductOutOfStock && (
                 <div className="absolute top-3 left-3">
                   <span className="bg-foreground/80 text-background px-2 py-1 text-[10px] uppercase tracking-widest font-bold backdrop-blur-sm">Sold Out</span>
                 </div>
@@ -448,18 +469,25 @@ export default function ProductClient({ product }: { product: Product }) {
                 </div>
 
                 <div className={`flex flex-wrap gap-2 transition-colors ${sizeError ? 'p-3 border border-destructive bg-destructive/5' : ''}`}>
-                  {product.sizes.map((size: string) => (
-                    <button
-                      key={size}
-                      onClick={() => { setSelectedSize(size); setSizeError(false); }}
-                      className={`min-w-[2.75rem] h-9 text-xs font-medium transition-all border ${selectedSize === size
-                          ? 'border-foreground bg-foreground text-background'
-                          : 'border-border hover:border-foreground bg-transparent'
-                        }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {product.sizes.map((size: string) => {
+                    const sizeQuantity = getSizeStockQuantity(product.sizeStock, size, product.stock ?? 0);
+                    const isSizeOutOfStock = sizeQuantity <= 0;
+
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => { setSelectedSize(size); setSizeError(false); }}
+                        disabled={isSizeOutOfStock}
+                        title={isSizeOutOfStock ? `${size} is out of stock` : `${size}: ${sizeQuantity} in stock`}
+                        className={`min-w-[2.75rem] h-9 text-xs font-medium transition-all border disabled:cursor-not-allowed disabled:opacity-35 disabled:line-through ${selectedSize === size
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-border hover:border-foreground bg-transparent'
+                          }`}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
                 </div>
                 {sizeError && <p className="text-[10px] text-destructive mt-2 uppercase tracking-wider">Please select a size to continue</p>}
               </div>
