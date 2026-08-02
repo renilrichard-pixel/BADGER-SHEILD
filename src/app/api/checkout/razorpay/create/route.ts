@@ -19,8 +19,11 @@ interface CheckoutItem {
   name: string;
   quantity: number;
   selectedSize: string;
-  selectedColor: string;
+  selectedColor?: string;
 }
+
+const DEFAULT_SELECTED_COLOR = 'Default';
+const DEFAULT_SELECTED_COLOR_KEY = DEFAULT_SELECTED_COLOR.toLowerCase();
 
 function logEvent(
   level: 'INFO' | 'WARN' | 'ERROR',
@@ -93,8 +96,8 @@ function validateCreatePayload(body: any): string | null {
     if (typeof item.selectedSize !== 'string' || item.selectedSize.trim() === '') {
       return `Invalid or missing selectedSize in item at index ${i}`;
     }
-    if (typeof item.selectedColor !== 'string' || item.selectedColor.trim() === '') {
-      return `Invalid or missing selectedColor in item at index ${i}`;
+    if (item.selectedColor !== undefined && typeof item.selectedColor !== 'string') {
+      return `Invalid selectedColor in item at index ${i}`;
     }
   }
 
@@ -140,6 +143,36 @@ function isRazorpayAuthError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) return false;
   const gatewayError = error as { statusCode?: unknown; status_code?: unknown };
   return gatewayError.statusCode === 401 || gatewayError.status_code === 401;
+}
+
+function resolveSelectedColor(
+  rawSelectedColor: string | undefined,
+  availableColors: string[]
+): { selectedColor: string; wasInferred: boolean } {
+  const trimmedColor = rawSelectedColor?.trim() ?? '';
+
+  if (availableColors.length === 0) {
+    return {
+      selectedColor: trimmedColor || DEFAULT_SELECTED_COLOR,
+      wasInferred: !trimmedColor,
+    };
+  }
+
+  if (!trimmedColor || trimmedColor.toLowerCase() === DEFAULT_SELECTED_COLOR_KEY) {
+    return {
+      selectedColor: availableColors[0],
+      wasInferred: true,
+    };
+  }
+
+  const canonicalColor = availableColors.find(
+    (color) => color.toLowerCase() === trimmedColor.toLowerCase()
+  );
+
+  return {
+    selectedColor: canonicalColor ?? trimmedColor,
+    wasInferred: false,
+  };
 }
 
 export async function POST(request: Request) {
@@ -228,11 +261,23 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `Size "${item.selectedSize}" is not available for product "${dbProduct.name}".` }, { status: 400 });
       }
 
-      if (dbProduct.colors && dbProduct.colors.length > 0) {
-        const colorExists = dbProduct.colors.some(c => c.name === item.selectedColor);
+      const availableColors = (dbProduct.colors ?? [])
+        .map((color) => color.name)
+        .filter((name): name is string => typeof name === 'string' && name.trim() !== '');
+      const { selectedColor, wasInferred: colorWasInferred } = resolveSelectedColor(item.selectedColor, availableColors);
+
+      if (availableColors.length > 0) {
+        const colorExists = availableColors.some((color) => color === selectedColor);
         if (!colorExists) {
-          logEvent('WARN', 'Invalid Client Payload', { reason: 'Color not available', productId: item.productId, color: item.selectedColor });
-          return NextResponse.json({ error: `Color "${item.selectedColor}" is not available for product "${dbProduct.name}".` }, { status: 400 });
+          logEvent('WARN', 'Invalid Client Payload', { reason: 'Color not available', productId: item.productId, color: selectedColor });
+          return NextResponse.json({ error: `Color "${selectedColor}" is not available for product "${dbProduct.name}".` }, { status: 400 });
+        }
+
+        if (colorWasInferred) {
+          logEvent('INFO', 'Legacy Cart Color Normalized', {
+            productId: item.productId,
+            selectedColor,
+          });
         }
       }
 
@@ -246,12 +291,12 @@ export async function POST(request: Request) {
       serverSubtotal += activePrice * item.quantity;
 
       itemsDetail.push({
-        cartId: item.cartId || `${item.productId}-${item.selectedSize}-${item.selectedColor}`,
+        cartId: item.cartId || `${item.productId}-${item.selectedSize}-${selectedColor}`,
         productId: item.productId,
         name: dbProduct.name,
         quantity: item.quantity,
         selectedSize: item.selectedSize,
-        selectedColor: item.selectedColor,
+        selectedColor,
         price: activePrice,
       });
     }

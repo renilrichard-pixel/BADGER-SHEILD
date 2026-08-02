@@ -79,7 +79,7 @@ export default function ProductClient({ product }: { product: Product }) {
   }, [product._id]);
 
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] || '');
-  const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0]?.name || '');
+  const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0]?.name || 'Default');
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const sizeCharts = defaultSizeCharts as SizeChartsData;

@@ -18,7 +18,7 @@ export default function WishlistPage() {
     isAuthenticated,
     isLoading,
   } = useWishlist();
-  const { cartItems, addToCart } = useCart();
+  const { cartItems } = useCart();
   const router = useRouter();
 
   const isInCart = (item: { productId: string }) => {
@@ -37,7 +37,7 @@ export default function WishlistPage() {
     toast.success(`Removed "${item.name}" from wishlist`);
   };
 
-  const handleAddToCart = async (item: {
+  const handleAddToCart = (item: {
     productId: string;
     slug: string;
     name: string;
@@ -49,18 +49,8 @@ export default function WishlistPage() {
       return;
     }
 
-    addToCart({
-      productId: item.productId,
-      slug: item.slug,
-      name: item.name,
-      image: item.image || '',
-      price: Number(item.price) || 0,
-      selectedSize: 'OS',
-      selectedColor: 'Default',
-      quantity: 1,
-    });
-
-    toast.success(`Added "${item.name}" to bag`);
+    toast.info('Choose size and color before adding to bag.');
+    router.push(`/products/${item.slug}`);
   };
 
   // Loading state

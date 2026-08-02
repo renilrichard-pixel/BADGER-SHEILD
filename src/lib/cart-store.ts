@@ -20,6 +20,11 @@ let state: 'uninitialized' | 'guest' | 'authenticated' | 'transitioning' = 'unin
 
 const GUEST_CART_KEY = 'badger_shield_guest_cart';
 let lastSavedCartJson = '';
+const DEFAULT_SELECTED_COLOR = 'Default';
+
+function normalizeSelectedColor(value: unknown): string {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : DEFAULT_SELECTED_COLOR;
+}
 
 function notify() {
   listeners.forEach(l => l());
@@ -38,7 +43,7 @@ function isValidCartItem(item: any): item is CartItem {
     typeof item.price === 'number' &&
     typeof item.quantity === 'number' &&
     typeof item.selectedSize === 'string' &&
-    typeof item.selectedColor === 'string' &&
+    (item.selectedColor === undefined || item.selectedColor === null || typeof item.selectedColor === 'string') &&
     typeof item.image === 'string' &&
     (item.selected === undefined || typeof item.selected === 'boolean')
   );
@@ -51,7 +56,10 @@ function loadGuestCartFromLocalStorage(): CartItem[] {
     if (!data) return [];
     const parsed = JSON.parse(data);
     if (Array.isArray(parsed)) {
-      return parsed.filter(isValidCartItem);
+      return parsed.filter(isValidCartItem).map(item => ({
+        ...item,
+        selectedColor: normalizeSelectedColor(item.selectedColor),
+      }));
     }
   } catch (err) {
     console.error('Error loading guest cart from localStorage:', err);
@@ -172,7 +180,7 @@ export const cartStore = {
                     price: Number(d.price),
                     quantity: d.quantity,
                     selectedSize: d.selected_size,
-                    selectedColor: d.selected_color,
+                    selectedColor: normalizeSelectedColor(d.selected_color),
                     image: d.image,
                     selected: true,
                   });
@@ -247,12 +255,16 @@ export const cartStore = {
       state = lastUserId ? 'authenticated' : 'guest';
       initialized = true;
     }
-    const cartId = `${item.productId}-${item.selectedSize}-${item.selectedColor}`;
+    const normalizedItem = {
+      ...item,
+      selectedColor: normalizeSelectedColor(item.selectedColor),
+    };
+    const cartId = `${normalizedItem.productId}-${normalizedItem.selectedSize}-${normalizedItem.selectedColor}`;
     const existing = memoryCart.find(i => i.cartId === cartId);
     if (existing) {
-      existing.quantity = Number(existing.quantity) + Number(item.quantity);
+      existing.quantity = Number(existing.quantity) + Number(normalizedItem.quantity);
     } else {
-      memoryCart.push({ ...item, cartId, quantity: Number(item.quantity), selected: true });
+      memoryCart.push({ ...normalizedItem, cartId, quantity: Number(normalizedItem.quantity), selected: true });
     }
     notify();
     if (lastUserId) {
