@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { client } from '@/sanity/lib/client';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 interface FooterCategory {
   _id: string;
@@ -57,7 +58,7 @@ export async function Footer() {
             <ul className="space-y-2 text-sm text-white/60">
               <li><Link href="/terms" className="hover:text-white transition-colors font-light">Terms of Service</Link></li>
               <li><Link href="/privacy" className="hover:text-white transition-colors font-light">Privacy Policy</Link></li>
-              <li><Link href="/returns" className="hover:text-white transition-colors font-light">Return Policy</Link></li>
+              <li><Link href="/returns" className="hover:text-white transition-colors font-light">{BRAND_POLICIES.REPLACEMENT.POLICY_NAME}</Link></li>
             </ul>
           </div>
 

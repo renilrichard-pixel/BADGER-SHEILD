@@ -602,7 +602,7 @@ export default function ProductClient({ product }: { product: Product }) {
                   <div className="pb-4 space-y-1.5 text-xs text-muted-foreground font-light">
                     <p>✓ {BRAND_POLICIES.SHIPPING.TEXT}</p>
                     <p>✓ Standard delivery: 5–7 business days</p>
-                    <p>✓ 3-Day Return policy for eligible unworn items</p>
+                    <p>✓ {BRAND_POLICIES.REPLACEMENT.WINDOW_DAYS}-Day {BRAND_POLICIES.REPLACEMENT.POLICY_NAME} for eligible unworn items</p>
                     <p>✓ Replacements Only (subject to stock availability)</p>
                   </div>
                 )}

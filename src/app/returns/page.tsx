@@ -78,7 +78,7 @@ export default function ReturnsPage() {
               Eligibility for Replacement
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              We accept replacement requests under our 3-day return policy for legitimate issues such as:
+              We accept replacement requests under our {BRAND_POLICIES.REPLACEMENT.WINDOW_DAYS}-day {BRAND_POLICIES.REPLACEMENT.POLICY_NAME} for legitimate issues such as:
             </p>
             <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-2 leading-relaxed">
               <li>
