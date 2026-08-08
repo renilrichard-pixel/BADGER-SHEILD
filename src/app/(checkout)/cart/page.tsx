@@ -25,7 +25,7 @@ export default function CartPage() {
   const selectedItems = items.filter((item) => item.selected !== false);
   
   const subtotal = selectedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shipping = subtotal > 5000 ? 0 : 250;
+  const shipping = 0;
   const total = subtotal + shipping;
 
   const allSelected = items.length > 0 && items.every((item) => item.selected !== false);
@@ -219,7 +219,7 @@ export default function CartPage() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping</span>
                 <span className="font-medium">
-                  {selectedItems.length === 0 ? '—' : shipping === 0 ? 'Complimentary' : `₹${shipping.toLocaleString()}`}
+                  {selectedItems.length === 0 ? '—' : 'Complimentary'}
                 </span>
               </div>
               <Separator />

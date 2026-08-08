@@ -51,8 +51,8 @@ const FAQ_DATA: FAQSection[] = [
         answer: 'Tracking information will be provided once your order has been shipped.',
       },
       {
-        question: 'Are shipping charges included?',
-        answer: 'Shipping charges, if applicable, will be displayed during checkout before payment.',
+        question: 'Is delivery free?',
+        answer: 'Yes, we provide Free Delivery All Over India on all orders with no minimum order threshold.',
       },
     ],
   },

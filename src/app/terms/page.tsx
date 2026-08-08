@@ -87,7 +87,7 @@ export default function TermsPage() {
               Shipping & Delivery
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Orders placed on BADGER SHEILD are processed and shipped within standard business days. While we endeavor to meet all estimated delivery dates, shipping speeds and delivery times may vary based on shipping courier partners, logistics constraints, and the delivery destination within India. Free shipping is provided for qualifying orders exceeding our designated threshold.
+              Orders placed on BADGER SHEILD are processed and shipped within standard business days. Free Delivery All Over India is provided for all orders. While we endeavor to meet all estimated delivery dates, shipping speeds and delivery times may vary based on shipping courier partners, logistics constraints, and the delivery destination within India.
             </p>
           </section>
 

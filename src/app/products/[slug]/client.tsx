@@ -69,8 +69,8 @@ interface Product {
 }
 
 const TRUST_BADGES = [
-  { icon: Truck, label: 'Free Shipping', sub: 'Orders over ₹5,000' },
-  { icon: RotateCcw, label: 'Easy Returns', sub: '30-day return policy' },
+  { icon: Truck, label: 'Free Delivery', sub: 'All Over India' },
+  { icon: RotateCcw, label: '3-Day Return', sub: 'Replacements Only' },
   { icon: Shield, label: 'Secure Payment', sub: '100% safe & secure' },
   { icon: Package, label: 'Premium Quality', sub: 'Carefully crafted' },
 ];
@@ -599,10 +599,10 @@ export default function ProductClient({ product }: { product: Product }) {
                 </button>
                 {openAccordion === 'shipping' && (
                   <div className="pb-4 space-y-1.5 text-xs text-muted-foreground font-light">
-                    <p>✓ Free shipping on orders over ₹5,000</p>
+                    <p>✓ Free Delivery All Over India</p>
                     <p>✓ Standard delivery: 5–7 business days</p>
-                    <p>✓ Express delivery: 2–3 business days (₹249)</p>
-                    <p>✓ Easy 30-day returns for unworn items</p>
+                    <p>✓ 3-Day Return policy for eligible unworn items</p>
+                    <p>✓ Replacements Only (subject to stock availability)</p>
                   </div>
                 )}
               </div>

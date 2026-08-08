@@ -305,7 +305,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const serverShipping = serverSubtotal > 5000 ? 0 : 250;
+    const serverShipping = 0;
     const serverTotal = serverSubtotal + serverShipping;
     const amountInPaise = Math.round(serverTotal * 100);
 

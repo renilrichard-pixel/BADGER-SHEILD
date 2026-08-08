@@ -59,7 +59,7 @@ export default function CheckoutPage() {
 
   const selectedItems = items.filter(i => i.selected !== false);
   const subtotal = selectedItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const shipping = subtotal > 5000 ? 0 : 250;
+  const shipping = 0;
   const total = subtotal + shipping;
 
   /* ── Auth & user ── */
@@ -521,15 +521,13 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="font-semibold">{shipping === 0 ? 'Free' : `₹${shipping.toLocaleString()}`}</span>
+                    <span className="font-semibold">Free Delivery</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold pt-3 border-t border-border/40">
                     <span>Total</span>
                     <span className="text-base">₹{total.toLocaleString()}</span>
                   </div>
-                  {shipping > 0 && (
-                    <p className="text-[9px] text-muted-foreground text-right">Free shipping over ₹5,000</p>
-                  )}
+                  <p className="text-[9px] text-muted-foreground text-right">Free Delivery All Over India</p>
                 </div>
               </div>
             </div>
