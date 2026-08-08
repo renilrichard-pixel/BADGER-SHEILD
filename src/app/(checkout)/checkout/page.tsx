@@ -10,6 +10,7 @@ import { useCart } from '@/lib/hooks/use-cart';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import PaymentSelector from '@/components/checkout/PaymentSelector';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 declare global {
   interface Window { Razorpay: any; }
@@ -59,7 +60,7 @@ export default function CheckoutPage() {
 
   const selectedItems = items.filter(i => i.selected !== false);
   const subtotal = selectedItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const shipping = 0;
+  const shipping = BRAND_POLICIES.SHIPPING.FEE;
   const total = subtotal + shipping;
 
   /* ── Auth & user ── */
@@ -521,13 +522,13 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="font-semibold">Free Delivery</span>
+                    <span className="font-semibold">{BRAND_POLICIES.SHIPPING.LABEL}</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold pt-3 border-t border-border/40">
                     <span>Total</span>
                     <span className="text-base">₹{total.toLocaleString()}</span>
                   </div>
-                  <p className="text-[9px] text-muted-foreground text-right">Free Delivery All Over India</p>
+                  <p className="text-[9px] text-muted-foreground text-right">{BRAND_POLICIES.SHIPPING.TEXT}</p>
                 </div>
               </div>
             </div>

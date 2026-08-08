@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Mail, Phone, Clock, ShieldAlert } from 'lucide-react';
 import BackButton from './back-button';
 import ContactForm from './contact-form';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 export const metadata: Metadata = {
   title: 'Contact Us | BADGER SHEILD',
@@ -102,7 +103,7 @@ export default function ContactPage() {
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   For returns or replacement requests, please ensure you have your order details and required proof as outlined in our{' '}
                   <Link href="/returns" className="text-foreground underline hover:text-foreground/80 transition-colors">
-                    Return Policy
+                    {BRAND_POLICIES.REPLACEMENT.POLICY_NAME}
                   </Link>
                   .
                 </p>

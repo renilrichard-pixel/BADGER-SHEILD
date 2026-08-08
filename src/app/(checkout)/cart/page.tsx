@@ -9,6 +9,7 @@ import { Minus, Plus, X, ArrowRight, ShoppingBag, Package } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/lib/hooks/use-cart';
 import { toast } from 'sonner';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 export default function CartPage() {
   const {
@@ -25,7 +26,7 @@ export default function CartPage() {
   const selectedItems = items.filter((item) => item.selected !== false);
   
   const subtotal = selectedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shipping = 0;
+  const shipping = BRAND_POLICIES.SHIPPING.FEE;
   const total = subtotal + shipping;
 
   const allSelected = items.length > 0 && items.every((item) => item.selected !== false);
@@ -239,7 +240,7 @@ export default function CartPage() {
 
             <div className="mt-6 space-y-3">
               <p className="text-[10px] text-muted-foreground text-center uppercase tracking-widest opacity-60">
-                Complimentary Returns within 14 days
+                {BRAND_POLICIES.REPLACEMENT.WINDOW_TEXT}
               </p>
               <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-2 opacity-40">
                 Secure Checkout

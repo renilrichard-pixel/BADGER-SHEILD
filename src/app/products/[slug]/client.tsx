@@ -15,6 +15,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
 } from '@/components/ui/sheet';
 import defaultSizeCharts from '@/data/size-charts.json';
+import { BRAND_POLICIES } from '@/lib/policies';
 import { wishlistStore } from '@/lib/wishlist-store';
 import { requireAuth } from '@/lib/require-auth';
 import { useRatings } from '@/context/RatingsContext';
@@ -69,8 +70,8 @@ interface Product {
 }
 
 const TRUST_BADGES = [
-  { icon: Truck, label: 'Free Delivery', sub: 'All Over India' },
-  { icon: RotateCcw, label: '3-Day Return', sub: 'Replacements Only' },
+  { icon: Truck, label: BRAND_POLICIES.SHIPPING.LABEL, sub: BRAND_POLICIES.SHIPPING.SUBTEXT },
+  { icon: RotateCcw, label: BRAND_POLICIES.REPLACEMENT.WINDOW_LABEL, sub: BRAND_POLICIES.REPLACEMENT.WINDOW_SUBTEXT },
   { icon: Shield, label: 'Secure Payment', sub: '100% safe & secure' },
   { icon: Package, label: 'Premium Quality', sub: 'Carefully crafted' },
 ];
@@ -599,7 +600,7 @@ export default function ProductClient({ product }: { product: Product }) {
                 </button>
                 {openAccordion === 'shipping' && (
                   <div className="pb-4 space-y-1.5 text-xs text-muted-foreground font-light">
-                    <p>✓ Free Delivery All Over India</p>
+                    <p>✓ {BRAND_POLICIES.SHIPPING.TEXT}</p>
                     <p>✓ Standard delivery: 5–7 business days</p>
                     <p>✓ 3-Day Return policy for eligible unworn items</p>
                     <p>✓ Replacements Only (subject to stock availability)</p>

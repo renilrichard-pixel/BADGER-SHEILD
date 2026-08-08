@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, Shield } from 'lucide-react';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | BADGER SHEILD',
@@ -122,7 +123,7 @@ export default function PrivacyPage() {
               Returns & Replacements
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              If you initiate a return, replacement, or damage claim, we may use your order details and contact information to verify evidence (such as the mandatory unboxing video) and coordinate pickup and refund timelines.
+              If you initiate a return or replacement request, we may use your order details and contact information to verify evidence (such as the mandatory unboxing video) and coordinate pickup and replacement workflows under our {BRAND_POLICIES.REPLACEMENT.WINDOW_DAYS}-Day {BRAND_POLICIES.REPLACEMENT.POLICY_NAME}.
             </p>
           </section>
 

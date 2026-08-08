@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, RotateCcw, ShieldAlert } from 'lucide-react';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 export const metadata: Metadata = {
-  title: 'Return & Replacement Policy | BADGER SHEILD',
-  description: "Learn about BADGER SHEILD's return, replacement, claim verification, and refund process.",
+  title: 'Replacement Policy | BADGER SHEILD',
+  description: "Learn about BADGER SHEILD's replacement policy, 3-day return window, and claim verification process.",
 };
 
 export default function ReturnsPage() {
@@ -31,7 +32,7 @@ export default function ReturnsPage() {
           <div className="inline-flex p-3 rounded-full bg-muted/50 mb-4 border border-border/50">
             <RotateCcw className="w-6 h-6 text-foreground" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-widest mb-4">Return & Replacement Policy</h1>
+          <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-widest mb-4">Replacement Policy</h1>
           <p className="text-muted-foreground text-xs uppercase tracking-wider">
             Last Updated: {lastUpdated}
           </p>
@@ -40,7 +41,7 @@ export default function ReturnsPage() {
         {/* Introduction */}
         <div className="mb-10 text-sm text-muted-foreground leading-relaxed">
           <p>
-            At BADGER SHEILD, we craft clothing with precision and premium quality. However, if you receive an item that is damaged, defective, or incorrect, we are committed to resolving it through our return and replacement process. Please review our policy guidelines below to understand your options and requirements.
+            At BADGER SHEILD, we craft clothing with precision and premium quality. However, if you receive an item that is damaged, defective, or incorrect, we are committed to resolving the issue through our replacement process within our 3-day return window. Please review our policy guidelines below to understand your options and requirements.
           </p>
         </div>
 
@@ -52,7 +53,7 @@ export default function ReturnsPage() {
               MANDATORY UNBOXING VIDEO REQUIRED
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Recording a continuous, unedited unboxing video is <strong className="text-foreground font-semibold">mandatory</strong> for all return and replacement claims. The video must show the shipping label clearly before opening. Claims submitted without a complete unboxing video are not eligible for review.
+              Recording a continuous, unedited unboxing video is <strong className="text-foreground font-semibold">mandatory</strong> for all 3-day replacement claims. The video must show the shipping label clearly before opening the package. Claims submitted without a complete unboxing video are not eligible for review.
             </p>
           </div>
         </div>
@@ -66,7 +67,7 @@ export default function ReturnsPage() {
               Mandatory Unboxing Video
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              To guarantee smooth dispute resolutions and verify packages, BADGER SHEILD requires a continuous, uncut unboxing video. This video acts as physical proof to verify transit damage, manufacturing defects, missing products, or incorrect items. Ensure the camera remains steady, the shipping label is legible, and the entire opening process is recorded in one single take.
+              To guarantee smooth dispute resolutions and verify packages, BADGER SHEILD requires a continuous, uncut unboxing video. This video acts as physical proof to verify transit damage, manufacturing defects, missing products, or incorrect items. Ensure the camera remains steady, the shipping label is clearly shown before opening, the entire opening process is recorded in one single take, and the product and packaging are clearly displayed.
             </p>
           </section>
 
@@ -74,20 +75,20 @@ export default function ReturnsPage() {
           <section className="space-y-3">
             <h2 className="text-base font-bold uppercase tracking-wider text-foreground flex items-center gap-3">
               <span className="text-xs font-mono border border-border px-2 py-0.5 bg-muted/30">02</span>
-              Eligibility for Returns
+              Eligibility for Replacement
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              We only accept return and replacement requests under the following specific circumstances:
+              We accept replacement requests under our 3-day return policy for legitimate issues such as:
             </p>
             <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-2 leading-relaxed">
               <li>
                 <strong className="text-foreground font-semibold">Damaged products:</strong> Items that suffered physical damage or tearing during transit.
               </li>
               <li>
-                <strong className="text-foreground font-semibold">Defective products:</strong> Apparel items displaying factory flaws such as stitch failures, dyeing errors, or hardware issues.
+                <strong className="text-foreground font-semibold">Defective products:</strong> Apparel items displaying factory flaws such as stitch failures, dyeing errors, hardware issues, or similar product defects.
               </li>
               <li>
-                <strong className="text-foreground font-semibold">Incorrect products received:</strong> Packages containing a different size, color, or design from your placed order.
+                <strong className="text-foreground font-semibold">Incorrect products received:</strong> Packages containing a different size, colour, design, or product from what was ordered.
               </li>
             </ul>
             <p className="text-sm text-muted-foreground leading-relaxed pt-1">
@@ -99,10 +100,10 @@ export default function ReturnsPage() {
           <section className="space-y-3">
             <h2 className="text-base font-bold uppercase tracking-wider text-foreground flex items-center gap-3">
               <span className="text-xs font-mono border border-border px-2 py-0.5 bg-muted/30">03</span>
-              Reporting Timeframe
+              Reporting Timeframe (3-Day Return Window)
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              To qualify for a return or replacement, you must contact our support team and report the issue within <strong className="text-foreground font-semibold">48 hours of delivery</strong>. Any requests submitted after the 48-hour period has elapsed will not be eligible for review, and the order will be deemed successfully accepted.
+              Replacement issues must be reported within <strong className="text-foreground font-semibold">3 days of delivery (72 hours)</strong>. Any requests submitted after the 3-day window has elapsed are not eligible for review, and the order will be deemed successfully accepted.
             </p>
           </section>
 
@@ -117,13 +118,13 @@ export default function ReturnsPage() {
             </p>
             <ol className="list-decimal pl-5 text-sm text-muted-foreground space-y-2 leading-relaxed">
               <li>
-                We review the submitted evidence, including the mandatory unboxing video and supplementary close-up photos.
+                BADGER SHEILD reviews the submitted evidence, including the mandatory unboxing video and any supplementary close-up photographs or videos.
               </li>
               <li>
-                Upon validation, our workflow triggers claim approval, and we schedule a reverse pickup for the items.
+                Once the issue is validated, the replacement process is initiated and reverse pickup is scheduled where applicable.
               </li>
               <li>
-                If the unboxing video is incomplete, edited, or missing, the request may be instantly denied.
+                If the unboxing video is incomplete, edited, missing, or otherwise fails to provide sufficient evidence, the replacement request may be denied.
               </li>
             </ol>
           </section>
@@ -132,17 +133,17 @@ export default function ReturnsPage() {
           <section className="space-y-3">
             <h2 className="text-base font-bold uppercase tracking-wider text-foreground flex items-center gap-3">
               <span className="text-xs font-mono border border-border px-2 py-0.5 bg-muted/30">05</span>
-              Refund & Replacement Timeline
+              Replacement Terms & Stock Availability
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               After the returned product is received back at our warehouse and successfully passes physical quality checks:
             </p>
             <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-2 leading-relaxed">
               <li>
-                <strong className="text-foreground font-semibold">Refunds:</strong> Approved refunds will be initiated to the original payment source within <strong className="text-foreground font-semibold">5–7 business days</strong>. The final arrival of funds in your account may vary slightly depending on your payment provider or bank.
+                <strong className="text-foreground font-semibold">Replacement Only:</strong> {BRAND_POLICIES.REPLACEMENT.DISCLAIMER_TEXT}
               </li>
               <li>
-                <strong className="text-foreground font-semibold">Replacements:</strong> Replacement shipments are subject to item and size stock availability. If the requested product is out of stock, we will issue a full refund to your original payment method.
+                <strong className="text-foreground font-semibold">Stock Availability:</strong> Replacement shipments are subject to item and size availability. If the exact requested replacement size or item is unavailable, customers may select another available size or another eligible product of equal value.
               </li>
             </ul>
           </section>

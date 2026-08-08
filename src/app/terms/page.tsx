@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, FileText } from 'lucide-react';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions | BADGER SHEILD',
@@ -87,7 +88,7 @@ export default function TermsPage() {
               Shipping & Delivery
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Orders placed on BADGER SHEILD are processed and shipped within standard business days. Free Delivery All Over India is provided for all orders. While we endeavor to meet all estimated delivery dates, shipping speeds and delivery times may vary based on shipping courier partners, logistics constraints, and the delivery destination within India.
+              Orders placed on BADGER SHEILD are processed and shipped within standard business days. {BRAND_POLICIES.SHIPPING.TEXT} is provided for all orders. While we endeavor to meet all estimated delivery dates, shipping speeds and delivery times may vary based on shipping courier partners, logistics constraints, and the delivery destination within India.
             </p>
           </section>
 
@@ -98,7 +99,7 @@ export default function TermsPage() {
               Returns & Replacements
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Your satisfaction is important to us. If you are not completely satisfied with your purchase, you may initiate a return or replacement request within the timeframe specified in our Return Policy. Items must be returned in their original, unused condition, complete with original tags and packaging intact. We reserve the right to reject returns that do not comply with these conditions.
+              {BRAND_POLICIES.REPLACEMENT.DISCLAIMER_TEXT} If you receive a damaged, defective, or incorrect item, you may initiate a replacement request within {BRAND_POLICIES.REPLACEMENT.WINDOW_DAYS} days of delivery ({BRAND_POLICIES.REPLACEMENT.WINDOW_HOURS} hours) as specified in our {BRAND_POLICIES.REPLACEMENT.POLICY_NAME}. Returned items must be unworn, unwashed, unaltered, and complete with original tags, packaging, and a mandatory unboxing video.
             </p>
           </section>
 

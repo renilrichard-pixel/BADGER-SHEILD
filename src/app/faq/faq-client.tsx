@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, HelpCircle, Search, MessageCircle, Package, ShieldCheck, RefreshCw, CreditCard, ArrowLeft, ChevronUp } from 'lucide-react';
+import { BRAND_POLICIES } from '@/lib/policies';
 
 interface FAQItem {
   question: string;
@@ -52,7 +53,7 @@ const FAQ_DATA: FAQSection[] = [
       },
       {
         question: 'Is delivery free?',
-        answer: 'Yes, we provide Free Delivery All Over India on all orders with no minimum order threshold.',
+        answer: `Yes, we provide ${BRAND_POLICIES.SHIPPING.TEXT} on all orders with no minimum order threshold.`,
       },
     ],
   },
@@ -61,20 +62,20 @@ const FAQ_DATA: FAQSection[] = [
     title: 'Returns & Replacements',
     items: [
       {
-        question: 'Can I return a product?',
-        answer: 'Returns are accepted only for eligible cases as outlined in the Return Policy.',
+        question: 'Can I request a replacement?',
+        answer: `Replacements are accepted for eligible issues (damaged, defective, or incorrect items received) under our ${BRAND_POLICIES.REPLACEMENT.WINDOW_DAYS}-Day Replacement Policy.`,
       },
       {
         question: 'Is an unboxing video required?',
-        answer: 'Yes. A complete unboxing video is mandatory for return or replacement requests.',
+        answer: 'Yes. A continuous, unedited unboxing video showing the shipping label before opening is mandatory for all replacement claims.',
       },
       {
         question: 'When should I report an issue?',
-        answer: 'Issues must be reported within 48 hours of product delivery.',
+        answer: `Replacement issues must be reported within ${BRAND_POLICIES.REPLACEMENT.WINDOW_DAYS} days of product delivery (${BRAND_POLICIES.REPLACEMENT.WINDOW_HOURS} hours).`,
       },
       {
-        question: 'How long do refunds take?',
-        answer: 'Approved refunds are generally processed within 5 to 7 business days.',
+        question: 'Do you offer monetary refunds?',
+        answer: `${BRAND_POLICIES.REPLACEMENT.DISCLAIMER_TEXT} Replacement shipments are subject to stock availability.`,
       },
     ],
   },

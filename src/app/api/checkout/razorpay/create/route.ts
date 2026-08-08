@@ -4,6 +4,7 @@ import { apiVersion, dataset, projectId } from '@/sanity/env';
 import { createClient as createSupabaseServer } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
+import { BRAND_POLICIES } from '@/lib/policies';
 import crypto from 'crypto';
 
 const writeClient = createSanityClient({
@@ -305,7 +306,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const serverShipping = 0;
+    const serverShipping = BRAND_POLICIES.SHIPPING.FEE;
     const serverTotal = serverSubtotal + serverShipping;
     const amountInPaise = Math.round(serverTotal * 100);
 
