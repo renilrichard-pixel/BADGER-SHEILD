@@ -322,5 +322,26 @@
         }
       }
     ]
+  },
+  "caps": {
+    "title": "Caps & Headwear",
+    "fit": "One size fits all with an adjustable rear strap for a customizable fit.",
+    "rows": [
+      {
+        "size": "OS",
+        "chest": {
+          "in": "21.5 - 23.5 (Circumference)",
+          "cm": "55 - 60 (Circumference)"
+        },
+        "length": {
+          "in": "4.75 (Crown Depth)",
+          "cm": "12 (Crown Depth)"
+        },
+        "shoulder": {
+          "in": "2.75 (Brim Length)",
+          "cm": "7 (Brim Length)"
+        }
+      }
+    ]
   }
 }

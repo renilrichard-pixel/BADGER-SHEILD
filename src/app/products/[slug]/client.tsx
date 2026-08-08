@@ -182,6 +182,7 @@ export default function ProductClient({ product }: { product: Product }) {
   const getCategoryKey = () => {
     const slug = (product.categorySlug || '').toLowerCase();
     const name = (product.name || '').toLowerCase();
+    if (slug.includes('cap') || name.includes('cap')) return 'caps';
     if (name.includes('oversized')) return 'oversized-t-shirts';
     if (slug.includes('hoodie') || name.includes('hoodie')) return 'hoodies';
     if (slug.includes('shirt') || name.includes('shirt') || slug.includes('t-shirt')) return 't-shirts';
