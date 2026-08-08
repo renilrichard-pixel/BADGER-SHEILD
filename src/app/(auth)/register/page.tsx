@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { ArrowRight, Quote, ShieldCheck, Shirt, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signup } from '../actions';
+import { AuthSubmitButton, AuthFormBody } from '@/components/auth-form';
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const params = await searchParams;
@@ -46,60 +47,60 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
               </div>
             </div>
 
-            <form className="space-y-5" action={signup}>
-              {params?.error && (
-                <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">
-                  {params.error}
-                </div>
-              )}
+            <form action={signup}>
+              <AuthFormBody>
+                {params?.error && (
+                  <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">
+                    {params.error}
+                  </div>
+                )}
 
-              <input type="hidden" name="next" value={params?.next || ''} />
+                <input type="hidden" name="next" value={params?.next || ''} />
 
-              <label className="block space-y-2" htmlFor="fullName">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Full name</span>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  className="h-12 w-full border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
-                  placeholder="Your name"
-                />
-              </label>
+                <label className="block space-y-2" htmlFor="fullName">
+                  <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Full name</span>
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    autoComplete="name"
+                    required
+                    className="h-12 w-full border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
+                    placeholder="Your name"
+                  />
+                </label>
 
-              <label className="block space-y-2" htmlFor="email">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Email address</span>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  className="h-12 w-full border border-border bg-background px-4 text-sm lowercase outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
-                  placeholder="you@example.com"
-                />
-              </label>
+                <label className="block space-y-2" htmlFor="email">
+                  <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Email address</span>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    required
+                    className="h-12 w-full border border-border bg-background px-4 text-sm lowercase outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
+                    placeholder="you@example.com"
+                  />
+                </label>
 
-              <label className="block space-y-2" htmlFor="password">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Password</span>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={6}
-                  required
-                  className="h-12 w-full border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
-                  placeholder="Create password"
-                />
-              </label>
+                <label className="block space-y-2" htmlFor="password">
+                  <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Password</span>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={6}
+                    required
+                    className="h-12 w-full border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
+                    placeholder="Create password"
+                  />
+                </label>
 
-              <Button type="submit" className="h-12 w-full rounded-none bg-primary text-[11px] font-black uppercase tracking-[0.24em] text-primary-foreground hover:bg-primary/90">
-                Register <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+                <AuthSubmitButton defaultText="Register" loadingText="CREATING ACCOUNT..." />
+              </AuthFormBody>
             </form>
 
             <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">

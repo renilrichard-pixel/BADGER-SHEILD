@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, KeyRound, Quote, Shirt, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { forgotPassword } from '../actions';
+import { AuthSubmitButton, AuthFormBody } from '@/components/auth-form';
 
 export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
   const params = await searchParams;
@@ -64,36 +65,36 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
               </div>
             </div>
 
-            <form className="space-y-5" action={forgotPassword}>
-              {params?.message && (
-                <div className="border border-emerald-200 bg-emerald-50/10 px-4 py-3 text-xs font-semibold text-emerald-600">
-                  {params.message}
-                </div>
-              )}
-              {params?.error && (
-                <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">
-                  {params.error}
-                </div>
-              )}
+            <form action={forgotPassword}>
+              <AuthFormBody>
+                {params?.message && (
+                  <div className="border border-emerald-200 bg-emerald-50/10 px-4 py-3 text-xs font-semibold text-emerald-600">
+                    {params.message}
+                  </div>
+                )}
+                {params?.error && (
+                  <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">
+                    {params.error}
+                  </div>
+                )}
 
-              <label className="block space-y-2" htmlFor="email">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Email address</span>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  className="h-12 w-full border border-border bg-background px-4 text-sm lowercase outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
-                  placeholder="you@example.com"
-                />
-              </label>
+                <label className="block space-y-2" htmlFor="email">
+                  <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Email address</span>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    required
+                    className="h-12 w-full border border-border bg-background px-4 text-sm lowercase outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
+                    placeholder="you@example.com"
+                  />
+                </label>
 
-              <Button type="submit" className="h-12 w-full rounded-none bg-primary text-[11px] font-black uppercase tracking-[0.24em] text-primary-foreground hover:bg-primary/90">
-                SEND RESET LINK <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+                <AuthSubmitButton defaultText="SEND RESET LINK" loadingText="SENDING RESET LINK..." />
+              </AuthFormBody>
             </form>
 
             <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
