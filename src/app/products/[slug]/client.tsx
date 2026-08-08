@@ -548,15 +548,6 @@ export default function ProductClient({ product }: { product: Product }) {
               </button>
             </div>
 
-            {/* Delivery callout */}
-            <div className="flex items-start gap-3 p-3 border border-border bg-muted/20">
-              <Truck className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider">Free Shipping</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">On orders over ₹5,000 · 5–7 business days</p>
-              </div>
-            </div>
-
             {/* Accordion */}
             <div className="border-t border-border">
               {/* Description */}

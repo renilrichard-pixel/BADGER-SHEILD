@@ -119,15 +119,10 @@ export async function Footer() {
           </div>
         </div>
         
-        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-xs text-white/40 font-light">
             &copy; {new Date().getFullYear()} BADGER SHEILD. All rights reserved.
           </p>
-          <div className="flex gap-4">
-            <span className="text-xs text-white/40 cursor-pointer hover:text-white transition-colors font-light">Instagram</span>
-            <span className="text-xs text-white/40 cursor-pointer hover:text-white transition-colors font-light">Twitter</span>
-            <span className="text-xs text-white/40 cursor-pointer hover:text-white transition-colors font-light">Pinterest</span>
-          </div>
         </div>
       </div>
     </footer>

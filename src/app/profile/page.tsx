@@ -930,31 +930,13 @@ export default function ProfilePage() {
                               </div>
 
                               {/* Delivery Info */}
-                              <div className="space-y-8">
-                                <div>
-                                  <h4 className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground mb-4 pb-2 border-b border-border/40">Delivery Destination</h4>
-                                  <div className="text-xs space-y-1.5 text-muted-foreground font-medium">
-                                    <p className="font-bold text-foreground">{order.customer_info?.firstName} {order.customer_info?.lastName}</p>
-                                    <p>{order.customer_info?.address}</p>
-                                    <p>{order.customer_info?.city}, {order.customer_info?.state} {order.customer_info?.pincode}</p>
-                                    <p className="mt-2 text-foreground font-semibold">{order.customer_info?.phone}</p>
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <h4 className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground mb-4 pb-2 border-b border-border/40">Shipment Status</h4>
-                                  <div className="space-y-4">
-                                    <div className="relative pl-4 border-l border-foreground/10">
-                                      <div className="absolute -left-[4.5px] top-0 w-2 h-2 rounded-full bg-emerald-500"></div>
-                                      <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Confirmed</p>
-                                      <p className="text-[10px] text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="relative pl-4">
-                                      <div className="absolute -left-[4.5px] top-0 w-2 h-2 rounded-full bg-border"></div>
-                                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">In Transit</p>
-                                      <p className="text-[10px] text-muted-foreground">Awaiting Dispatch</p>
-                                    </div>
-                                  </div>
+                              <div>
+                                <h4 className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground mb-4 pb-2 border-b border-border/40">Delivery Destination</h4>
+                                <div className="text-xs space-y-1.5 text-muted-foreground font-medium">
+                                  <p className="font-bold text-foreground">{order.customer_info?.firstName} {order.customer_info?.lastName}</p>
+                                  <p>{order.customer_info?.address}</p>
+                                  <p>{order.customer_info?.city}, {order.customer_info?.state} {order.customer_info?.pincode}</p>
+                                  <p className="mt-2 text-foreground font-semibold">{order.customer_info?.phone}</p>
                                 </div>
                               </div>
 
