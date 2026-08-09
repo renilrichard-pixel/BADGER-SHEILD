@@ -17,29 +17,8 @@ export const getCachedReviewAggregates = unstable_cache(
     const supabaseAdmin = getSupabaseAdmin();
     const map: ReviewSummaryMap = {};
 
-    try {
-      // 1. Database-Level: Query AVG(rating) and COUNT(*) grouped by product_id from reviews_summary view
-      const { data, error } = await supabaseAdmin
-        .from('reviews_summary')
-        .select('product_id, average_rating, review_count');
-
-      if (!error && data) {
-        data.forEach((row: any) => {
-          map[row.product_id] = {
-            averageRating: Number(row.average_rating) || 0,
-            reviewCount: Number(row.review_count) || 0,
-          };
-        });
-        return map;
-      }
-
-      // Log database view miss and proceed to fallback
-      console.warn('[REVIEWS AGGREGATION FALLBACK]', error?.message || 'Database view not found. Running in-memory fallback.');
-    } catch (err) {
-      console.error('[REVIEWS AGGREGATION VIEW EXCEPTION]', err);
-    }
-
-    // 2. Fallback: If view is missing, fetch only necessary fields (product_id, rating) and group in JavaScript
+    // Aggregate directly from the existing reviews table. This avoids relying on an
+    // optional `reviews_summary` database view that is not part of this project's schema.
     try {
       const { data, error } = await supabaseAdmin
         .from('reviews')
@@ -92,25 +71,7 @@ export const getCachedProductReviewAggregate = (productId: string) => unstable_c
     const supabaseAdmin = getSupabaseAdmin();
     const defaultVal = { averageRating: 0, reviewCount: 0 };
 
-    try {
-      // 1. Database-Level: Fetch single aggregated row from reviews_summary
-      const { data, error } = await (supabaseAdmin
-        .from('reviews_summary')
-        .select('average_rating, review_count')
-        .eq('product_id', pid)
-        .maybeSingle() as any);
-
-      if (!error && data) {
-        return {
-          averageRating: Number(data.average_rating) || 0,
-          reviewCount: Number(data.review_count) || 0,
-        };
-      }
-    } catch (err) {
-      console.error('[PRODUCT REVIEWS AGGREGATION VIEW EXCEPTION]', err);
-    }
-
-    // 2. Fallback: Fetch reviews only for this product and calculate rating metrics
+    // Fetch reviews only for this product and calculate rating metrics.
     try {
       const { data, error } = await supabaseAdmin
         .from('reviews')

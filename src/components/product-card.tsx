@@ -74,7 +74,7 @@ export function ProductCard({
     <div className="group flex flex-col justify-between h-full bg-card text-card-foreground">
       <div>
         <div className="relative mb-3 aspect-4/5 overflow-hidden bg-muted group/image border border-border/10">
-          <Link href={`/products/${slug}`} className="block w-full h-full">
+          <Link href={`/products/${slug}`} className="relative block w-full h-full">
             {mainImageUrl ? (
               <Image
                 src={mainImageUrl}

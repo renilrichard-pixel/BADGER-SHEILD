@@ -50,6 +50,91 @@ function verifyWebhookSignature(rawBody: string, receivedSignature: string, webh
   return signaturesMatch(expectedSignature, receivedSignature);
 }
 
+type WebhookEventStatus = 'processing' | 'completed' | 'failed';
+
+async function getWebhookEventStatus(supabaseAdmin: ReturnType<typeof getSupabaseAdmin>, eventId: string) {
+  const { data, error } = await (supabaseAdmin as any)
+    .from('razorpay_webhook_events')
+    .select('status')
+    .eq('event_id', eventId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Unable to read webhook event state.');
+  }
+
+  return data.status as WebhookEventStatus;
+}
+
+async function beginWebhookEvent(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  {
+    eventId,
+    eventName,
+    razorpayOrderId,
+    razorpayPaymentId,
+  }: {
+    eventId: string;
+    eventName: string;
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+  }
+) {
+  const { error: insertError } = await (supabaseAdmin as any)
+    .from('razorpay_webhook_events')
+    .insert(
+      {
+        event_id: eventId,
+        event_name: eventName,
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
+        status: 'processing',
+      },
+      { onConflict: 'event_id', ignoreDuplicates: true }
+    );
+
+  if (insertError) {
+    throw new Error(`Unable to record webhook event: ${insertError.message}`);
+  }
+
+  const status = await getWebhookEventStatus(supabaseAdmin, eventId);
+  if (status === 'completed') return 'completed';
+
+  // A retry can resume an interrupted or transiently failed delivery. Order
+  // completion itself is idempotent and has an optimistic status lock.
+  const { error: updateError } = await (supabaseAdmin as any)
+    .from('razorpay_webhook_events')
+    .update({ status: 'processing', last_error: null, updated_at: new Date().toISOString() })
+    .eq('event_id', eventId);
+
+  if (updateError) {
+    throw new Error(`Unable to start webhook event: ${updateError.message}`);
+  }
+
+  return 'processing';
+}
+
+async function finishWebhookEvent(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  eventId: string,
+  status: Extract<WebhookEventStatus, 'completed' | 'failed'>,
+  lastError?: string
+) {
+  const { error } = await (supabaseAdmin as any)
+    .from('razorpay_webhook_events')
+    .update({
+      status,
+      last_error: lastError || null,
+      completed_at: status === 'completed' ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('event_id', eventId);
+
+  if (error) {
+    throw new Error(`Unable to finish webhook event: ${error.message}`);
+  }
+}
+
 export async function POST(request: Request) {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
   if (!webhookSecret) {
@@ -63,6 +148,11 @@ export async function POST(request: Request) {
   if (!signature) {
     logEvent('WARN', 'Invalid Razorpay Webhook', { reason: 'Missing signature', eventId });
     return NextResponse.json({ received: false, error: 'Missing webhook signature.' }, { status: 400 });
+  }
+
+  if (!eventId) {
+    logEvent('WARN', 'Invalid Razorpay Webhook', { reason: 'Missing event ID' });
+    return NextResponse.json({ received: false, error: 'Missing webhook event ID.' }, { status: 400 });
   }
 
   const rawBody = await request.text();
@@ -116,6 +206,27 @@ export async function POST(request: Request) {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
+  try {
+    const eventStatus = await beginWebhookEvent(supabaseAdmin, {
+      eventId,
+      eventName,
+      razorpayOrderId,
+      razorpayPaymentId,
+    });
+
+    if (eventStatus === 'completed') {
+      logEvent('INFO', 'Razorpay Webhook Duplicate', { eventName, eventId, razorpayOrderId, razorpayPaymentId });
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+  } catch (error: any) {
+    logEvent('ERROR', 'Razorpay Webhook Event Tracking Failed', {
+      eventName,
+      eventId,
+      error: error?.message || String(error),
+    });
+    return NextResponse.json({ received: false, error: 'Webhook event tracking failed.' }, { status: 500 });
+  }
+
   const { data: order, error: fetchError } = await (supabaseAdmin as any)
     .from('orders')
     .select('*')
@@ -123,6 +234,9 @@ export async function POST(request: Request) {
     .single();
 
   if (fetchError || !order) {
+    await finishWebhookEvent(supabaseAdmin, eventId, 'failed', fetchError?.message || 'Order not found.').catch((error) =>
+      logEvent('ERROR', 'Razorpay Webhook Event Tracking Failed', { eventId, error: String(error) })
+    );
     logEvent('ERROR', 'Razorpay Webhook Order Missing', {
       eventName,
       eventId,
@@ -151,6 +265,8 @@ export async function POST(request: Request) {
       emailsSent: completion.emailsSent,
     });
 
+    await finishWebhookEvent(supabaseAdmin, eventId, 'completed');
+
     return NextResponse.json({
       received: true,
       orderId: completion.order.order_id,
@@ -166,7 +282,19 @@ export async function POST(request: Request) {
         razorpayPaymentId,
         reason: error.message,
       });
-      return NextResponse.json({ received: false, error: error.message }, { status: error.status });
+
+      if (error.status >= 500) {
+        await finishWebhookEvent(supabaseAdmin, eventId, 'failed', error.message).catch((trackingError) =>
+          logEvent('ERROR', 'Razorpay Webhook Event Tracking Failed', { eventId, error: String(trackingError) })
+        );
+        return NextResponse.json({ received: false, error: 'Webhook processing failed.' }, { status: 500 });
+      }
+
+      // The payment was authentic, but fulfillment cannot proceed (for example,
+      // stock ran out). Mark this event handled and acknowledge it so Razorpay
+      // does not retry it for 24 hours and eventually disable the webhook.
+      await finishWebhookEvent(supabaseAdmin, eventId, 'completed', error.message);
+      return NextResponse.json({ received: true, handled: false });
     }
 
     logEvent('ERROR', 'Razorpay Webhook Exception', {
@@ -176,6 +304,9 @@ export async function POST(request: Request) {
       razorpayPaymentId,
       error: error?.message || String(error),
     });
+    await finishWebhookEvent(supabaseAdmin, eventId, 'failed', error?.message || String(error)).catch((trackingError) =>
+      logEvent('ERROR', 'Razorpay Webhook Event Tracking Failed', { eventId, error: String(trackingError) })
+    );
     return NextResponse.json({ received: false, error: 'Webhook processing failed.' }, { status: 500 });
   }
 }

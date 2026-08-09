@@ -122,7 +122,7 @@ export async function completePaidRazorpayOrder({
       order,
       confirmedNow: false,
       cartCleared: cartClearedForExistingConfirmation,
-      emailSent: false,
+      emailsSent: null,
     };
   }
 
