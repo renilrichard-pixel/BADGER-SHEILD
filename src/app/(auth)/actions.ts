@@ -4,12 +4,24 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit'
 
 function normalizeEmail(value: FormDataEntryValue | null) {
   return String(value || '').trim().toLowerCase()
 }
 
 export async function login(formData: FormData) {
+  const requestHeaders = await headers()
+  const rateLimit = await checkRateLimit({
+    scope: 'auth:login',
+    identifier: getClientIp(requestHeaders),
+    limit: 5,
+    windowSeconds: 60,
+  })
+  if (!rateLimit.allowed) {
+    redirect(`/login?error=${encodeURIComponent('Too many login attempts. Please try again shortly.')}`)
+  }
+
   const supabase = await createClient()
   const next = formData.get('next') as string || '/'
 
@@ -29,6 +41,17 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
+  const requestHeaders = await headers()
+  const rateLimit = await checkRateLimit({
+    scope: 'auth:signup',
+    identifier: getClientIp(requestHeaders),
+    limit: 3,
+    windowSeconds: 3600,
+  })
+  if (!rateLimit.allowed) {
+    redirect(`/register?error=${encodeURIComponent('Too many registration attempts. Please try again later.')}`)
+  }
+
   const supabase = await createClient()
   const next = formData.get('next') as string || '/'
   const fullName = String(formData.get('fullName') || '').trim()
@@ -71,6 +94,17 @@ export async function logout() {
 }
 
 export async function forgotPassword(formData: FormData) {
+  const requestHeaders = await headers()
+  const rateLimit = await checkRateLimit({
+    scope: 'auth:password-reset',
+    identifier: getClientIp(requestHeaders),
+    limit: 3,
+    windowSeconds: 3600,
+  })
+  if (!rateLimit.allowed) {
+    redirect(`/forgot-password?error=${encodeURIComponent('Too many password-reset attempts. Please try again later.')}`)
+  }
+
   const supabase = await createClient()
   const email = normalizeEmail(formData.get('email'))
 
@@ -78,7 +112,7 @@ export async function forgotPassword(formData: FormData) {
     redirect(`/forgot-password?error=${encodeURIComponent('Email is required')}`)
   }
 
-  const host = (await headers()).get('host')
+  const host = requestHeaders.get('host')
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
   const origin = `${protocol}://${host}`
 
@@ -94,6 +128,17 @@ export async function forgotPassword(formData: FormData) {
 }
 
 export async function resetPassword(formData: FormData) {
+  const requestHeaders = await headers()
+  const rateLimit = await checkRateLimit({
+    scope: 'auth:password-update',
+    identifier: getClientIp(requestHeaders),
+    limit: 5,
+    windowSeconds: 3600,
+  })
+  if (!rateLimit.allowed) {
+    redirect(`/reset-password?error=${encodeURIComponent('Too many password-update attempts. Please try again later.')}`)
+  }
+
   const supabase = await createClient()
   const password = formData.get('password') as string
 

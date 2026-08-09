@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { completePaidRazorpayOrder, PaymentCompletionError } from '@/lib/razorpayOrderCompletion';
 import { createClient as createSupabaseServer } from '@/lib/supabase/server';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 function logEvent(
   level: 'INFO' | 'WARN' | 'ERROR',
@@ -76,6 +77,19 @@ function isRazorpayAuthError(error: unknown): boolean {
 }
 
 export async function POST(request: Request) {
+  const rateLimit = await checkRateLimit({
+    scope: 'checkout:verify',
+    identifier: getClientIp(request.headers),
+    limit: 15,
+    windowSeconds: 60,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { verified: false, error: 'Too many verification attempts. Please try again shortly.' },
+      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+    );
+  }
+
   let body: any;
   try {
     body = await request.json();

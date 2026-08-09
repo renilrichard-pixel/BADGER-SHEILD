@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 interface StockCheckItem {
   productId: string;
@@ -17,6 +18,19 @@ interface SanityStockProduct {
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = await checkRateLimit({
+      scope: 'cart:stock',
+      identifier: getClientIp(request.headers),
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many stock checks. Please try again shortly.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
+    }
+
     let body: any;
     try {
       body = await request.json();

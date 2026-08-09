@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from 'next-sanity';
 import { apiVersion, dataset, projectId } from '@/sanity/env';
 import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 const writeClient = createClient({
   projectId,
@@ -100,6 +101,19 @@ function validateStockPayload(body: any): string | null {
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = await checkRateLimit({
+      scope: 'checkout:stock',
+      identifier: getClientIp(request.headers),
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many stock checks. Please try again shortly.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      );
+    }
+
     let body: any;
     try {
       body = await request.json();

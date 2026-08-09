@@ -5,6 +5,7 @@ import { createClient as createSupabaseServer } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
 import { BRAND_POLICIES } from '@/lib/policies';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import crypto from 'crypto';
 
 const writeClient = createSanityClient({
@@ -178,6 +179,19 @@ function resolveSelectedColor(
 }
 
 export async function POST(request: Request) {
+  const rateLimit = await checkRateLimit({
+    scope: 'checkout:create',
+    identifier: getClientIp(request.headers),
+    limit: 10,
+    windowSeconds: 60,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many checkout attempts. Please try again shortly.' },
+      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+    );
+  }
+
   let requestBody: any;
   try {
     requestBody = await request.json();
