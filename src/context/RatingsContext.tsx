@@ -87,8 +87,8 @@ const addProfilesToReviews = async (reviews: any[], sessionUser: any): Promise<R
 
   if (userIds.length) {
     const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("*")
+      .from("public_review_profiles")
+      .select("id, full_name, avatar_url")
       .in("id", userIds);
 
     if (error) {
@@ -154,8 +154,8 @@ export function RatingsProvider({ children }: { children: React.ReactNode }) {
       const offset = currentReviews.length;
 
       const { data: reviews, error } = await supabase
-        .from('reviews')
-        .select('*')
+        .from('public_reviews')
+        .select('id, user_id, product_id, rating, experience, created_at, updated_at')
         .eq('product_id', productId)
         .order('created_at', { ascending: false }) // Explicit ordering newest first
         .range(offset, offset + PAGE_SIZE); // Fetch PAGE_SIZE + 1 items
@@ -185,7 +185,7 @@ export function RatingsProvider({ children }: { children: React.ReactNode }) {
 
       // Calculate initial client ratings state from all ratings of this product
       const { data: allRatings } = await supabase
-        .from('reviews')
+        .from('public_reviews')
         .select('rating')
         .eq('product_id', productId);
 
