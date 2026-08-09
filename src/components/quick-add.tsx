@@ -50,10 +50,6 @@ export function QuickAdd({
 
     if (isAdded) return;
 
-    const { requireAuth } = await import('@/lib/require-auth');
-    const authed = await requireAuth();
-    if (!authed) return;
-
     if (totalStock <= 0) {
       toast.error('Out of stock');
       return;
@@ -67,10 +63,6 @@ export function QuickAdd({
   };
 
   const addToCart = async (selectedSize: string) => {
-    const { requireAuth } = await import('@/lib/require-auth');
-    const authed = await requireAuth();
-    if (!authed) return;
-
     const availableStock = getSizeStockQuantity(sizeStock, selectedSize, stockQty);
     if (availableStock <= 0) {
       toast.error(`Size ${selectedSize} is out of stock`);

@@ -16,10 +16,10 @@ export interface CartItem {
 let listeners: (() => void)[] = [];
 let memoryCart: CartItem[] = [];
 let initialized = false;
-let state: 'uninitialized' | 'guest' | 'authenticated' | 'transitioning' = 'uninitialized';
+let state: 'uninitialized' | 'unauthenticated' | 'authenticated' | 'transitioning' = 'uninitialized';
 
-const GUEST_CART_KEY = 'badger_shield_guest_cart';
-let lastSavedCartJson = '';
+const PENDING_CART_ITEM_KEY = 'badger_shield_pending_cart_item';
+const LEGACY_GUEST_CART_KEY = 'badger_shield_guest_cart';
 const DEFAULT_SELECTED_COLOR = 'Default';
 
 function normalizeSelectedColor(value: unknown): string {
@@ -49,37 +49,33 @@ function isValidCartItem(item: any): item is CartItem {
   );
 }
 
-function loadGuestCartFromLocalStorage(): CartItem[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const data = localStorage.getItem(GUEST_CART_KEY);
-    if (!data) return [];
-    const parsed = JSON.parse(data);
-    if (Array.isArray(parsed)) {
-      return parsed.filter(isValidCartItem).map(item => ({
-        ...item,
-        selectedColor: normalizeSelectedColor(item.selectedColor),
-      }));
-    }
-  } catch (err) {
-    console.error('Error loading guest cart from localStorage:', err);
-    try {
-      localStorage.removeItem(GUEST_CART_KEY);
-    } catch (_) {}
-  }
-  return [];
+function savePendingCartItem(item: Omit<CartItem, 'cartId'>) {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(PENDING_CART_ITEM_KEY, JSON.stringify(item));
 }
 
-function saveGuestCartToLocalStorage(cart: CartItem[]) {
-  if (typeof window === 'undefined') return;
+function takePendingCartItem(): Omit<CartItem, 'cartId'> | null {
+  if (typeof window === 'undefined') return null;
+
   try {
-    const json = JSON.stringify(cart);
-    if (json === lastSavedCartJson) return;
-    localStorage.setItem(GUEST_CART_KEY, json);
-    lastSavedCartJson = json;
-  } catch (err) {
-    console.error('Error saving guest cart to localStorage:', err);
+    const rawItem = sessionStorage.getItem(PENDING_CART_ITEM_KEY);
+    sessionStorage.removeItem(PENDING_CART_ITEM_KEY);
+    if (!rawItem) return null;
+
+    const item = JSON.parse(rawItem);
+    if (!isValidCartItem({ ...item, cartId: 'pending-cart-item' })) return null;
+    const { cartId: _cartId, ...pendingItem } = item;
+    return pendingItem;
+  } catch {
+    sessionStorage.removeItem(PENDING_CART_ITEM_KEY);
+    return null;
   }
+}
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') return;
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
 }
 
 async function syncToSupabase(cart: CartItem[]) {
@@ -209,8 +205,6 @@ export const cartStore = {
         notify();
         if (updated && lastUserId) {
           await syncToSupabase(memoryCart);
-        } else if (updated) {
-          saveGuestCartToLocalStorage(memoryCart);
         }
         return stockLimits;
       } finally {
@@ -228,24 +222,30 @@ export const cartStore = {
   async handleAuthChange(user: any) {
     if (typeof window === 'undefined') return;
 
+    // Guest carts are no longer supported. Remove any cart persisted by an
+    // earlier version of the application.
+    try {
+      localStorage.removeItem(LEGACY_GUEST_CART_KEY);
+    } catch {
+      // Browser storage can be unavailable in restricted browsing modes.
+    }
+
     const currentUserId = user?.id || null;
 
-    // Defer transition logic execution to the end of the microtask queue
-    queueMicrotask(async () => {
-      if (currentUserId !== lastUserId || state === 'uninitialized') {
-        const wasGuest = lastUserId === null;
-        const isAuthed = currentUserId !== null;
-        const transitioningToAuthed = wasGuest && isAuthed;
+    if (currentUserId !== lastUserId || state === 'uninitialized') {
+      const wasUnauthenticated = lastUserId === null;
+      const isAuthed = currentUserId !== null;
+      const transitioningToAuthed = wasUnauthenticated && isAuthed;
 
-        lastUserId = currentUserId;
-        state = 'transitioning';
-        initialized = false;
-        notify();
+      lastUserId = currentUserId;
+      state = 'transitioning';
+      initialized = false;
+      notify();
 
-        if (currentUserId) {
-          if (isFetching) return;
-          isFetching = true;
-          const preMergeGuestCart = loadGuestCartFromLocalStorage();
+      if (currentUserId) {
+        if (isFetching) return;
+        isFetching = true;
+        const pendingItem = transitioningToAuthed ? takePendingCartItem() : null;
           try {
             const supabase = createClient();
             const { data, error } = await supabase
@@ -278,77 +278,58 @@ export const cartStore = {
               });
             }
 
-            const guestCart = transitioningToAuthed ? preMergeGuestCart : [];
-            const hasGuestItems = guestCart.length > 0;
-
-            const merged = [...dbCart];
-            if (transitioningToAuthed && hasGuestItems) {
-              guestCart.forEach(localItem => {
-                const existing = merged.find(i => i.cartId === localItem.cartId);
-                if (existing) {
-                  existing.quantity = Number(existing.quantity) + Number(localItem.quantity);
-                } else {
-                  merged.push(localItem);
-                }
-              });
-            }
-
-            memoryCart = merged;
+            memoryCart = dbCart;
             state = 'authenticated';
             initialized = true;
             notify();
 
-            // Sync merged cart back to Supabase
+            if (pendingItem) {
+              const result = await cartStore.addItem(pendingItem);
+              if (!result.success) {
+                console.warn('Could not add the requested item after login:', result.reason);
+              }
+            }
+
             if (memoryCart.length > 0) {
               await syncToSupabase(memoryCart);
             }
-
-            // Immediately remove the guest cart from localStorage after successful merge
-            if (transitioningToAuthed && hasGuestItems) {
-              try {
-                localStorage.removeItem(GUEST_CART_KEY);
-                lastSavedCartJson = '';
-              } catch (err) {
-                console.error('Error removing guest cart from localStorage:', err);
-              }
-            }
           } catch (err) {
-            console.error('Error fetching/merging cart in handleAuthChange:', err);
-            // Rollback on failure:
-            if (transitioningToAuthed) {
-              memoryCart = preMergeGuestCart;
-              state = 'guest';
-              lastUserId = null;
-            } else {
-              memoryCart = [];
-              state = 'authenticated';
-            }
+            console.error('Error loading cart in handleAuthChange:', err);
+            memoryCart = [];
+            state = 'authenticated';
             initialized = true;
             notify();
           } finally {
             isFetching = false;
           }
-        } else {
-          // User logged out
-          memoryCart = loadGuestCartFromLocalStorage();
-          lastSavedCartJson = JSON.stringify(memoryCart);
-          state = 'guest';
-          initialized = true;
-          notify();
-        }
+      } else {
+        // User logged out
+        memoryCart = [];
+        state = 'unauthenticated';
+        initialized = true;
+        notify();
       }
-    });
+    }
   },
 
   async addItem(item: Omit<CartItem, 'cartId'>): Promise<{ success: boolean; reason?: string }> {
-    if (state === 'uninitialized' || state === 'transitioning') {
-      state = lastUserId ? 'authenticated' : 'guest';
-      initialized = true;
-    }
     const normalizedItem = {
       ...item,
       selectedColor: normalizeSelectedColor(item.selectedColor),
     };
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      savePendingCartItem(normalizedItem);
+      redirectToLogin();
+      return { success: false, reason: 'Please sign in to add items to your cart.' };
+    }
+
+    if (lastUserId !== user.id) {
+      await cartStore.handleAuthChange(user);
+    }
+
     const cartId = `${normalizedItem.productId}-${normalizedItem.selectedSize}-${normalizedItem.selectedColor}`;
     const existing = memoryCart.find(i => i.cartId === cartId);
 
@@ -381,11 +362,7 @@ export const cartStore = {
       memoryCart.push({ ...normalizedItem, cartId, quantity: targetQty, selected: true });
     }
     notify();
-    if (lastUserId) {
-      await syncToSupabase(memoryCart);
-    } else {
-      saveGuestCartToLocalStorage(memoryCart);
-    }
+    await syncToSupabase(memoryCart);
     return { success: true };
   },
 
@@ -400,11 +377,7 @@ export const cartStore = {
     if (targetQty < existing.quantity) {
       existing.quantity = targetQty;
       notify();
-      if (lastUserId) {
-        await syncToSupabase(memoryCart);
-      } else {
-        saveGuestCartToLocalStorage(memoryCart);
-      }
+      await syncToSupabase(memoryCart);
       return { success: true };
     }
 
@@ -429,34 +402,20 @@ export const cartStore = {
 
     existing.quantity = targetQty;
     notify();
-    if (lastUserId) {
-      await syncToSupabase(memoryCart);
-    } else {
-      saveGuestCartToLocalStorage(memoryCart);
-    }
+    await syncToSupabase(memoryCart);
     return { success: true };
   },
 
   removeItem(cartId: string) {
     memoryCart = [...memoryCart.filter(i => i.cartId !== cartId)];
     notify();
-    if (lastUserId) {
-      return syncToSupabase(memoryCart);
-    } else {
-      saveGuestCartToLocalStorage(memoryCart);
-      return Promise.resolve();
-    }
+    return syncToSupabase(memoryCart);
   },
 
   removeMultiple(cartIds: string[]) {
     memoryCart = [...memoryCart.filter(i => !cartIds.includes(i.cartId))];
     notify();
-    if (lastUserId) {
-      return syncToSupabase(memoryCart);
-    } else {
-      saveGuestCartToLocalStorage(memoryCart);
-      return Promise.resolve();
-    }
+    return syncToSupabase(memoryCart);
   },
 
   toggleSelection(cartId: string) {
@@ -464,22 +423,13 @@ export const cartStore = {
     if (existing) {
       existing.selected = existing.selected === false ? true : false;
       notify();
-      if (!lastUserId) {
-        saveGuestCartToLocalStorage(memoryCart);
-      }
     }
   },
 
   clearCart() {
     memoryCart = [];
-    initialized = false;
     notify();
-    if (lastUserId) {
-      return syncToSupabase(memoryCart);
-    } else {
-      saveGuestCartToLocalStorage(memoryCart);
-      return Promise.resolve();
-    }
+    return syncToSupabase(memoryCart);
   },
 
   subscribe(listener: () => void) {
@@ -489,18 +439,3 @@ export const cartStore = {
     };
   }
 };
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (event) => {
-    if (event.key === GUEST_CART_KEY && !lastUserId) {
-      const updatedCart = loadGuestCartFromLocalStorage();
-      const currentJson = JSON.stringify(memoryCart);
-      const updatedJson = JSON.stringify(updatedCart);
-      if (currentJson !== updatedJson) {
-        memoryCart = updatedCart;
-        lastSavedCartJson = updatedJson;
-        notify();
-      }
-    }
-  });
-}
