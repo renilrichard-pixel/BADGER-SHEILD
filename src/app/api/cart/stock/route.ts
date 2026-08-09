@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
-import { getSizeStockQuantity, type SizeStockEntry } from '@/lib/sizeStock';
+import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
 
 interface StockCheckItem {
   productId: string;
   cartId: string;
   selectedSize: string;
+  quantity: number;
 }
 
 interface SanityStockProduct {
@@ -32,7 +33,10 @@ export async function POST(request: Request) {
         item &&
         typeof item.productId === 'string' &&
         typeof item.cartId === 'string' &&
-        typeof item.selectedSize === 'string'
+        typeof item.selectedSize === 'string' &&
+        typeof item.quantity === 'number' &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0
     );
 
     if (items.length === 0) {
@@ -48,13 +52,36 @@ export async function POST(request: Request) {
 
     const stockLimits: Record<string, number> = {};
 
+    const requestedStock = new Map<string, { items: StockCheckItem[]; quantity: number }>();
+
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p._id === item.productId);
       if (!dbProduct) {
         stockLimits[item.cartId] = 0;
-      } else {
-        const availableStock = getSizeStockQuantity(dbProduct.sizeStock, item.selectedSize, dbProduct.stock);
-        stockLimits[item.cartId] = Math.max(0, availableStock);
+        continue;
+      }
+
+      const stockKey = `${item.productId}\u0000${normalizeSize(item.selectedSize)}`;
+      const existingRequest = requestedStock.get(stockKey);
+      requestedStock.set(stockKey, {
+        items: [...(existingRequest?.items ?? []), item],
+        quantity: (existingRequest?.quantity ?? 0) + item.quantity,
+      });
+    }
+
+    for (const request of requestedStock.values()) {
+      const representative = request.items[0];
+      const dbProduct = dbProducts.find((product) => product._id === representative.productId);
+      const availableStock = getSizeStockQuantity(
+        dbProduct?.sizeStock,
+        representative.selectedSize,
+        dbProduct?.stock
+      );
+
+      for (const item of request.items) {
+        // Reserve the quantities already requested by sibling cart lines when
+        // computing this line's selectable maximum.
+        stockLimits[item.cartId] = Math.max(0, availableStock - (request.quantity - item.quantity));
       }
     }
 

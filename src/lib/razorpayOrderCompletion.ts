@@ -3,7 +3,7 @@ import { createClient as createSanityClient } from 'next-sanity';
 import { apiVersion, dataset, projectId } from '@/sanity/env';
 import { confirmOrderWithStockResult } from '@/lib/orderFulfillment';
 import { sendOrderEmails } from '@/lib/orderEmail';
-import { getSizeStockQuantity, type SizeStockEntry } from '@/lib/sizeStock';
+import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
 
 const sanityClient = createSanityClient({
   projectId,
@@ -78,13 +78,34 @@ async function validateStock(order: CompletionOrder) {
     { productIds }
   );
 
+  const requestedStock = new Map<string, {
+    productId: string;
+    productName: string;
+    size: string;
+    available: number;
+    quantity: number;
+  }>();
+
   for (const item of items) {
     const dbProduct = dbProducts.find((p: any) => p._id === item.productId);
     const availableStock = getSizeStockQuantity(dbProduct?.sizeStock, item.selectedSize, dbProduct?.stock);
+    const size = normalizeSize(item.selectedSize);
+    const stockKey = `${item.productId}\u0000${size}`;
+    const existingRequest = requestedStock.get(stockKey);
 
-    if (availableStock < item.quantity) {
+    requestedStock.set(stockKey, {
+      productId: item.productId,
+      productName: dbProduct?.name || item.name,
+      size: item.selectedSize,
+      available: availableStock,
+      quantity: (existingRequest?.quantity ?? 0) + Number(item.quantity || 0),
+    });
+  }
+
+  for (const request of requestedStock.values()) {
+    if (request.available < request.quantity) {
       throw new PaymentCompletionError(
-        `Fulfillment failed: Insufficient stock for product "${dbProduct?.name || item.name}" in size "${item.selectedSize}".`,
+        `Fulfillment failed: Insufficient stock for product "${request.productName}" in size "${request.size}".`,
         400
       );
     }

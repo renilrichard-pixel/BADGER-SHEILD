@@ -246,6 +246,13 @@ export async function POST(request: Request) {
 
     let serverSubtotal = 0;
     const itemsDetail: any[] = [];
+    const requestedStock = new Map<string, {
+      productId: string;
+      productName: string;
+      size: string;
+      available: number;
+      quantity: number;
+    }>();
 
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p._id === item.productId);
@@ -287,10 +294,15 @@ export async function POST(request: Request) {
       }
 
       const availableStock = getSizeStockQuantity(dbProduct.sizeStock, canonicalSize, dbProduct.stock);
-      if (availableStock < item.quantity) {
-        logEvent('ERROR', 'Stock Validation Failure', { reason: 'Insufficient stock', productId: item.productId, requested: item.quantity, available: availableStock });
-        return NextResponse.json({ error: `Insufficient stock for product "${dbProduct.name}" in size "${canonicalSize}". Available: ${availableStock}.` }, { status: 400 });
-      }
+      const stockKey = `${item.productId}\u0000${canonicalSize}`;
+      const existingRequest = requestedStock.get(stockKey);
+      requestedStock.set(stockKey, {
+        productId: item.productId,
+        productName: dbProduct.name,
+        size: canonicalSize,
+        available: availableStock,
+        quantity: (existingRequest?.quantity ?? 0) + item.quantity,
+      });
 
       const activePrice = (dbProduct.salePrice !== undefined && dbProduct.salePrice !== null) ? dbProduct.salePrice : dbProduct.price;
       serverSubtotal += activePrice * item.quantity;
@@ -304,6 +316,22 @@ export async function POST(request: Request) {
         selectedColor,
         price: activePrice,
       });
+    }
+
+    // A cart can contain duplicate lines for the same product and size. Check
+    // their combined quantity so separate lines cannot exceed available stock.
+    for (const request of requestedStock.values()) {
+      if (request.available < request.quantity) {
+        logEvent('ERROR', 'Stock Validation Failure', {
+          reason: 'Insufficient stock',
+          productId: request.productId,
+          requested: request.quantity,
+          available: request.available,
+        });
+        return NextResponse.json({
+          error: `Insufficient stock for product "${request.productName}" in size "${request.size}". Available: ${request.available}.`,
+        }, { status: 400 });
+      }
     }
 
     const serverShipping = BRAND_POLICIES.SHIPPING.FEE;

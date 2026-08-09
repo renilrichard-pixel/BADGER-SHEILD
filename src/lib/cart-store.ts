@@ -141,6 +141,7 @@ async function fetchStockLimitsFromApi(cart: CartItem[]): Promise<Record<string,
         productId: i.productId,
         cartId: i.cartId,
         selectedSize: i.selectedSize,
+        quantity: i.quantity,
       })),
     };
     const res = await fetch('/api/cart/stock', {

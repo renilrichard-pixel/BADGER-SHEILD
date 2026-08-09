@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from 'next-sanity';
 import { apiVersion, dataset, projectId } from '@/sanity/env';
-import { getSizeStockQuantity, type SizeStockEntry } from '@/lib/sizeStock';
+import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
 
 const writeClient = createClient({
   projectId,
@@ -124,6 +124,12 @@ export async function POST(request: Request) {
     );
 
     const stockErrors: StockError[] = [];
+    const requestedStock = new Map<string, {
+      productId: string;
+      size: string;
+      items: CheckoutItem[];
+      quantity: number;
+    }>();
 
     for (const item of items) {
       const dbProduct = dbProducts.find((p) => p._id === item.productId);
@@ -135,17 +141,33 @@ export async function POST(request: Request) {
           available: 0,
           reason: 'Product no longer exists',
         });
-      } else {
-        const availableStock = getSizeStockQuantity(dbProduct.sizeStock, item.selectedSize, dbProduct.stock);
-        if (availableStock < item.quantity) {
+        continue;
+      }
+
+      const size = normalizeSize(item.selectedSize);
+      const stockKey = `${item.productId}\u0000${size}`;
+      const existingRequest = requestedStock.get(stockKey);
+      requestedStock.set(stockKey, {
+        productId: item.productId,
+        size,
+        items: [...(existingRequest?.items ?? []), item],
+        quantity: (existingRequest?.quantity ?? 0) + item.quantity,
+      });
+    }
+
+    for (const request of requestedStock.values()) {
+      const dbProduct = dbProducts.find((product) => product._id === request.productId);
+      const availableStock = getSizeStockQuantity(dbProduct?.sizeStock, request.size, dbProduct?.stock);
+      if (availableStock < request.quantity) {
+        for (const item of request.items) {
           stockErrors.push({
             productId: item.productId,
             cartId: item.cartId,
-            name: dbProduct.name,
+            name: dbProduct?.name || item.name,
             available: availableStock,
             reason: availableStock === 0
-              ? `Size ${item.selectedSize} is out of stock`
-              : `Only ${availableStock} units left in size ${item.selectedSize}`,
+              ? `Size ${request.size} is out of stock`
+              : `Only ${availableStock} units left in size ${request.size}`,
           });
         }
       }
