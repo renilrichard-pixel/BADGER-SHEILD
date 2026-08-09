@@ -3,10 +3,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { WishlistButton } from '@/components/wishlist-button';
-import { QuickAdd } from '@/components/quick-add';
+import { ProductCardActions } from '@/components/product-card-actions';
 import { urlFor } from '@/sanity/lib/image';
 import type { SanityImageSource } from '@sanity/image-url';
-import { getTotalStock, type SizeStockEntry } from '@/lib/sizeStock';
+import type { SizeStockEntry } from '@/lib/sizeStock';
 
 interface ProductCardProps {
   id: string;
@@ -49,7 +49,6 @@ export function ProductCard({
   newArrival,
   bestSeller,
   colors,
-  colorHexes,
   sizes,
   sizeStock,
   stockQty = 99,
@@ -60,8 +59,6 @@ export function ProductCard({
 }: ProductCardProps) {
   const displayPrice = salePrice ?? price;
   const isOnSale = !!salePrice && salePrice < price;
-  const outOfStock = getTotalStock(sizeStock, stockQty) === 0;
-
   const primaryImage = image ?? images?.[0] ?? null;
   const secondaryImage = images?.[1] ?? null;
   const mainImageUrl = getImageUrl(primaryImage);
@@ -71,9 +68,9 @@ export function ProductCard({
   const ratingCount = reviewCount;
 
   return (
-    <div className="group flex flex-col justify-between h-full bg-card text-card-foreground">
+    <div className="group flex h-full flex-col bg-card p-2.5 text-card-foreground shadow-[0_5px_20px_rgba(0,0,0,0.08)] transition-shadow duration-300 hover:shadow-[0_12px_28px_rgba(0,0,0,0.14)]">
       <div>
-        <div className="relative mb-3 aspect-4/5 overflow-hidden bg-muted group/image border border-border/10">
+        <div className="relative mb-3 aspect-4/5 overflow-hidden bg-muted group/image">
           <Link href={`/products/${slug}`} className="relative block w-full h-full">
             {mainImageUrl ? (
               <Image
@@ -115,9 +112,6 @@ export function ProductCard({
               {isOnSale && (
                 <span className="bg-red-600 text-white px-1.5 py-0.5 text-[8px] uppercase tracking-widest font-black">Sale</span>
               )}
-              {outOfStock && (
-                <span className="bg-muted-foreground text-background px-1.5 py-0.5 text-[8px] uppercase tracking-widest font-black">Sold Out</span>
-              )}
             </div>
 
             {/* Wishlist button */}
@@ -131,18 +125,9 @@ export function ProductCard({
               />
             </div>
           </Link>
-
-          {/* Quick Add Overlay */}
-          <QuickAdd
-            productId={id}
-            name={name}
-            price={displayPrice}
-            image={mainImageUrl || ''}
-            slug={slug}
-            sizes={sizes}
-            colors={colors}
-            sizeStock={sizeStock}
-            stockQty={stockQty}
+          <ProductCardActions
+            productId={id} name={name} slug={slug} price={displayPrice} image={mainImageUrl || ''}
+            sizes={sizes} colors={colors} sizeStock={sizeStock} stockQty={stockQty}
           />
         </div>
 
@@ -154,64 +139,26 @@ export function ProductCard({
             </p>
           )}
 
-          {/* Star Rating summary if there are reviews */}
-          {ratingCount > 0 && (
-            <div className="flex items-center gap-1.5">
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`w-3 h-3 ${
-                      star <= Math.round(ratingValue)
-                        ? 'fill-foreground text-foreground'
-                        : 'fill-muted text-muted-foreground'
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">
-                ({ratingCount})
-              </span>
-            </div>
-          )}
-
           <Link href={`/products/${slug}`} className="block">
-            <h3 className="text-[12px] font-medium leading-snug hover:underline underline-offset-4 line-clamp-2 text-foreground/90">
-              {name}
-            </h3>
-          </Link>
-
-          {/* Color dots */}
-          {colorHexes && colorHexes.length > 0 && (
-            <div className="flex gap-1 pt-0.5">
-              {colorHexes.slice(0, 5).map((hex, i) => (
-                <span
-                  key={i}
-                  title={colors?.[i] || ''}
-                  className="w-2.5 h-2.5 rounded-full border border-border/60 shrink-0"
-                  style={{ backgroundColor: hex || '#808080' }}
-                />
-              ))}
-              {colorHexes.length > 5 && (
-                <span className="text-[8px] text-muted-foreground self-center">+{colorHexes.length - 5}</span>
-              )}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="line-clamp-2 text-[12px] font-medium leading-snug text-foreground/90 hover:underline hover:underline-offset-4">
+                {name}
+              </h3>
+              <div className="shrink-0 text-right">
+                <p className={`text-xs font-bold ${isOnSale ? 'text-red-600 dark:text-red-400' : ''}`}>₹{displayPrice.toLocaleString()}</p>
+                {isOnSale && price && <p className="text-[10px] text-muted-foreground line-through">₹{price.toLocaleString()}</p>}
+              </div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Price & Title (aligned to the bottom of the card) */}
-      <div className="mt-3">
-        <Link href={`/products/${slug}`} className="block">
-          <div className="flex items-center gap-2">
-            <p className={`text-xs font-bold ${isOnSale ? 'text-red-600 dark:text-red-400' : ''}`}>
-              ₹{displayPrice.toLocaleString()}
-            </p>
-            {isOnSale && price && (
-              <p className="text-[10px] text-muted-foreground line-through">₹{price.toLocaleString()}</p>
-            )}
+          </Link>
+          <div className="mt-1 flex items-center gap-1.5">
+            <div className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star key={star} className={`h-3 w-3 ${star <= Math.round(ratingValue) ? 'fill-foreground text-foreground' : 'fill-muted text-muted-foreground'}`} />
+              ))}
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">({ratingCount})</span>
           </div>
-        </Link>
+        </div>
       </div>
     </div>
   );

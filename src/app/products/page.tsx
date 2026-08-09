@@ -115,6 +115,10 @@ export default async function ProductsPage({
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
+      <div className="mb-7">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Home <span className="mx-1">›</span> {category?.replace(/-/g, ' ') || 'Products'}</p>
+        <h1 className="text-3xl font-black uppercase tracking-tight md:text-4xl">{category?.replace(/-/g, ' ') || 'Products'}</h1>
+      </div>
 
 
       <div className="w-full">
@@ -141,7 +145,7 @@ export default async function ProductsPage({
           ) : (
             <>
               {/* Dense grid layout to reduce card sizes */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {products.map(renderProductCard)}
               </div>
 

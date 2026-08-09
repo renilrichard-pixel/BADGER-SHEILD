@@ -349,6 +349,14 @@ export const cartStore = {
 
     if (limit !== undefined) {
       if (targetQty > limit) {
+        // Allow one unavailable item to be saved from a product card. The
+        // checkout stock check remains the authority before payment.
+        if (limit === 0 && !existing && addQty === 1) {
+          memoryCart.push({ ...normalizedItem, cartId, quantity: 1, selected: true });
+          notify();
+          await syncToSupabase(memoryCart);
+          return { success: true };
+        }
         const msg = limit === 0
           ? `Size ${normalizedItem.selectedSize} is out of stock`
           : `Maximum available quantity reached (${limit} available in size ${normalizedItem.selectedSize})`;

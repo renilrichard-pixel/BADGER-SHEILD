@@ -42,6 +42,7 @@ export default function CartPage() {
   }, [isLoading, refreshStockLimits]);
 
   const selectedItems = items.filter((item) => item.selected !== false);
+  const hasSelectedOutOfStock = selectedItems.some((item) => stockLimits[item.cartId] === 0);
   
   const subtotal = selectedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const shipping = BRAND_POLICIES.SHIPPING.FEE;
@@ -60,6 +61,10 @@ export default function CartPage() {
   const handleCheckoutClick = () => {
     if (selectedItems.length === 0) {
       toast.error('Please select at least one item to checkout');
+      return;
+    }
+    if (hasSelectedOutOfStock) {
+      toast.error('Remove or deselect out-of-stock items before checkout');
       return;
     }
     router.push('/checkout');
@@ -219,7 +224,15 @@ export default function CartPage() {
                       </div>
                       {(() => {
                         const limit = stockLimits[item.cartId];
+                        const isOutOfStock = limit === 0;
                         const isMaxReached = limit !== undefined && item.quantity >= limit;
+                        if (isOutOfStock) {
+                          return (
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                              Out of stock — can&apos;t checkout
+                            </span>
+                          );
+                        }
                         if (isMaxReached) {
                           return (
                             <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider">
@@ -282,10 +295,11 @@ export default function CartPage() {
               </div>
             </div>
 
-            <Button 
-              className="w-full rounded-none uppercase tracking-widest h-14" 
-              size="lg" 
+            <Button
+              className="w-full rounded-none uppercase tracking-widest h-14 disabled:cursor-not-allowed"
+              size="lg"
               onClick={handleCheckoutClick}
+              disabled={selectedItems.length === 0 || hasSelectedOutOfStock}
             >
               Proceed to Secure Checkout <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -310,7 +324,8 @@ export default function CartPage() {
         </div>
         <Button
           onClick={handleCheckoutClick}
-          className="px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-none h-11"
+          className="px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-none h-11 disabled:cursor-not-allowed"
+          disabled={selectedItems.length === 0 || hasSelectedOutOfStock}
         >
           Place Order
         </Button>
@@ -318,4 +333,3 @@ export default function CartPage() {
     </div>
   );
 }
-

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Minus, Plus, ShoppingBag, Heart, Ruler,
@@ -18,6 +19,7 @@ import defaultSizeCharts from '@/data/size-charts.json';
 import { BRAND_POLICIES } from '@/lib/policies';
 import { wishlistStore } from '@/lib/wishlist-store';
 import { requireAuth } from '@/lib/require-auth';
+import { saveBuyNowItem } from '@/lib/buy-now';
 import { useRatings } from '@/context/RatingsContext';
 import { supabase } from '@/lib/supabaseClient';
 import {
@@ -44,11 +46,6 @@ interface SizeChartsData {
   [key: string]: CategoryChart;
 }
 
-interface SanityColor {
-  name: string;
-  hex?: string;
-}
-
 interface Product {
   _id?: string;
   slug?: { current: string };
@@ -57,7 +54,7 @@ interface Product {
   salePrice?: number;
   description?: string;
   sizes?: string[];
-  colors?: SanityColor[];
+  colors?: { name: string; hex?: string }[];
   material?: string;
   stock?: number;
   sizeStock?: SizeStockEntry[];
@@ -78,6 +75,7 @@ const TRUST_BADGES = [
 
 export default function ProductClient({ product }: { product: Product }) {
   const { addItem } = useCart();
+  const router = useRouter();
   const { ratings, getProductReviews, getUserReview, updateRating, deleteUserReview, loadProductReviews, isLoadingReviews, hasMoreReviews } = useRatings();
   const defaultSelectedSize = getFirstAvailableSize(product.sizes, product.sizeStock, product.stock);
 
@@ -88,7 +86,7 @@ export default function ProductClient({ product }: { product: Product }) {
   }, [product._id]);
 
   const [selectedSize, setSelectedSize] = useState<string>(defaultSelectedSize);
-  const [selectedColor, setSelectedColor] = useState<string>(product.colors?.[0]?.name || 'Default');
+  const [selectedColor] = useState<string>(product.colors?.[0]?.name || 'Default');
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const sizeCharts = defaultSizeCharts as SizeChartsData;
@@ -171,6 +169,32 @@ export default function ProductClient({ product }: { product: Product }) {
     toast.success('Added to Bag', {
       description: `${product.name}${selectedSize ? ` · ${selectedSize}` : ''}${selectedColor ? ` / ${selectedColor}` : ''}`,
     });
+  };
+
+  const handleBuyNow = async () => {
+    if (!selectedSize && product.sizes && product.sizes.length > 0) {
+      setSizeError(true);
+      toast.error('Please select a size');
+      return;
+    }
+    if (stock <= 0) {
+      setSizeError(true);
+      toast.error(selectedSize ? `Size ${selectedSize} is out of stock` : 'Out of stock');
+      return;
+    }
+
+    saveBuyNowItem({
+      productId: product._id || 'unknown',
+      name: product.name || 'Product',
+      slug: product.slug?.current || 'product',
+      price: displayPrice,
+      quantity,
+      selectedSize,
+      selectedColor,
+      image: product.images?.[0] || '',
+    });
+    const authed = await requireAuth('/checkout?buy-now=1');
+    if (authed) router.push('/checkout?buy-now=1');
   };
 
   const toggleWishlist = async () => {
@@ -359,41 +383,6 @@ export default function ProductClient({ product }: { product: Product }) {
               <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">Inclusive of all taxes</p>
             </div>
 
-            {/* Color Selection — from Sanity */}
-            {product.colors && product.colors.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider">Color:</span>
-                  <span className="text-xs text-muted-foreground capitalize">{selectedColor}</span>
-                </div>
-                <div className="flex flex-wrap gap-2.5">
-                  {product.colors.map((color: SanityColor) => (
-                    <button
-                      key={color.name}
-                      onClick={() => setSelectedColor(color.name)}
-                      title={color.name}
-                      className={`group relative w-8 h-8 rounded-full transition-all focus:outline-none border ${selectedColor === color.name
-                          ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background border-transparent'
-                          : 'border-transparent hover:ring-2 hover:ring-muted-foreground hover:ring-offset-2 hover:ring-offset-background'
-                        }`}
-                      style={{ backgroundColor: color.hex || '#808080' }}
-                    >
-                      {selectedColor === color.name && (
-                        <Check
-                          className="absolute inset-0 m-auto w-3 h-3"
-                          style={{
-                            color: color.hex && ['#f5f5f5', '#fff', '#ffffff', '#f5f0e8', '#e8dcc8', '#d4d4d4'].includes(color.hex.toLowerCase())
-                              ? '#111'
-                              : '#fff',
-                          }}
-                        />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Size Selection — from Sanity */}
             {product.sizes && product.sizes.length > 0 && (
               <div>
@@ -533,15 +522,23 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             {/* CTA */}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
               <Button
-                className="flex-1 rounded-none uppercase tracking-widest h-12 text-xs font-bold"
+                className="rounded-none border border-foreground bg-background text-foreground uppercase tracking-widest h-12 text-xs font-bold hover:bg-muted"
                 size="lg"
                 onClick={handleAddToCart}
                 disabled={isOutOfStock || isAdded}
               >
                 {isAdded ? <Check className="w-4 h-4 mr-2" /> : <ShoppingBag className="w-4 h-4 mr-2" />}
                 {isAdded ? 'Added' : isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
+              </Button>
+              <Button
+                className="rounded-none uppercase tracking-widest h-12 text-xs font-bold"
+                size="lg"
+                onClick={handleBuyNow}
+                disabled={isOutOfStock}
+              >
+                Buy Now
               </Button>
               <button
                 onClick={toggleWishlist}

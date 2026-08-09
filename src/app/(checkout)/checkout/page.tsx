@@ -4,13 +4,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Script from 'next/script';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Lock, MapPin, CreditCard, RotateCcw, Package } from 'lucide-react';
 import { useCart } from '@/lib/hooks/use-cart';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import PaymentSelector from '@/components/checkout/PaymentSelector';
 import { BRAND_POLICIES } from '@/lib/policies';
+import { clearBuyNowItem, readBuyNowItem } from '@/lib/buy-now';
+import type { CartItem } from '@/lib/cart-store';
 
 declare global {
   interface Window { Razorpay: any; }
@@ -45,6 +47,8 @@ function clearActive() { try { localStorage.removeItem(ACTIVE_KEY); } catch {} }
 export default function CheckoutPage() {
   const { items, removeItem, updateQuantity, removeMultipleFromCart, isAuthenticated, isLoading } = useCart();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isBuyNow = searchParams.get('buy-now') === '1';
 
   const [user, setUser] = useState<any>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -57,11 +61,23 @@ export default function CheckoutPage() {
   const [activeCartIds, setActiveCartIds] = useState<string[]>([]);
   const [polling, setPolling] = useState(false);
   const finalizing = useRef(false);
+  const [buyNowItem, setBuyNowItem] = useState<CartItem | null>(null);
+  const [buyNowReady, setBuyNowReady] = useState(!isBuyNow);
 
-  const selectedItems = items.filter(i => i.selected !== false);
+  const selectedItems = buyNowItem ? [buyNowItem] : items.filter(i => i.selected !== false);
   const subtotal = selectedItems.reduce((s, i) => s + i.price * i.quantity, 0);
   const shipping = BRAND_POLICIES.SHIPPING.FEE;
   const total = subtotal + shipping;
+
+  useEffect(() => {
+    if (!isBuyNow) {
+      setBuyNowItem(null);
+      setBuyNowReady(true);
+      return;
+    }
+    setBuyNowItem(readBuyNowItem());
+    setBuyNowReady(true);
+  }, [isBuyNow]);
 
   /* ── Auth & user ── */
   useEffect(() => {
@@ -120,8 +136,12 @@ export default function CheckoutPage() {
           setActiveOrderId(null);
           localStorage.setItem('lastOrder', JSON.stringify(order));
           toast.success('Payment confirmed!', { id: 'pay-verify' });
-          const cartIdsToRemove = activeCartIds.length > 0 ? activeCartIds : selectedItems.map(i => i.cartId);
-          await removeMultipleFromCart(cartIdsToRemove);
+          if (buyNowItem) {
+            clearBuyNowItem();
+          } else {
+            const cartIdsToRemove = activeCartIds.length > 0 ? activeCartIds : selectedItems.map(i => i.cartId);
+            await removeMultipleFromCart(cartIdsToRemove);
+          }
           router.replace('/order-confirmation');
         }
       } catch { /* retry next tick */ }
@@ -186,8 +206,8 @@ export default function CheckoutPage() {
     if (!stockRes?.ok) {
       const err = await stockRes?.json().catch(() => ({}));
       if (err?.errors) {
-        err.errors.forEach((e: any) => e.available <= 0 ? removeItem(e.cartId) : updateQuantity(e.cartId, e.available));
-        toast.error('Some items had stock changes. Cart updated.');
+        if (!buyNowItem) err.errors.forEach((e: any) => e.available <= 0 ? removeItem(e.cartId) : updateQuantity(e.cartId, e.available));
+        toast.error(err.errors[0]?.reason ?? 'Some items had stock changes. Cart updated.');
       } else {
         toast.error(err?.error ?? 'Stock check failed.');
       }
@@ -291,7 +311,8 @@ export default function CheckoutPage() {
           clearActive();
           localStorage.setItem('lastOrder', JSON.stringify(verifyData.order));
           toast.success('Payment successful!');
-          await removeMultipleFromCart(purchasedCartIds);
+          if (buyNowItem) clearBuyNowItem();
+          else await removeMultipleFromCart(purchasedCartIds);
           router.replace('/order-confirmation');
         } else {
           toast.error('Order verification failed or incomplete. Contact support.');
@@ -322,10 +343,16 @@ export default function CheckoutPage() {
     });
 
     rzp.open();
-  }, [selectedAddr, addresses, selectedItems, payMethod, user, removeItem, updateQuantity, removeMultipleFromCart, router]);
+  }, [selectedAddr, addresses, selectedItems, payMethod, user, removeItem, updateQuantity, removeMultipleFromCart, router, buyNowItem]);
 
   /* ── Guards ── */
   if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!buyNowReady) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
     </div>
@@ -335,7 +362,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen flex flex-col items-center justify-center gap-5 text-center px-4">
       <Lock className="w-8 h-8 text-muted-foreground" strokeWidth={1} />
       <h1 className="text-xl font-bold uppercase tracking-wider">Sign in to checkout</h1>
-      <Link href="/login?next=/checkout" className="border border-foreground bg-foreground text-background px-8 py-3 text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-80 transition-opacity">
+      <Link href={`/login?next=${encodeURIComponent(isBuyNow ? '/checkout?buy-now=1' : '/checkout')}`} className="border border-foreground bg-foreground text-background px-8 py-3 text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-80 transition-opacity">
         Sign In
       </Link>
     </div>
@@ -345,8 +372,8 @@ export default function CheckoutPage() {
     <div className="min-h-screen flex flex-col items-center justify-center gap-5 text-center px-4">
       <Package className="w-10 h-10 text-muted-foreground" strokeWidth={1} />
       <h1 className="text-2xl font-bold uppercase tracking-wider">No items selected</h1>
-      <Link href="/cart" className="border border-foreground bg-foreground text-background px-8 py-3 text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-80 transition-opacity">
-        Return to Bag
+      <Link href={isBuyNow ? '/products' : '/cart'} className="border border-foreground bg-foreground text-background px-8 py-3 text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-80 transition-opacity">
+        {isBuyNow ? 'Continue Shopping' : 'Return to Bag'}
       </Link>
     </div>
   );
@@ -364,8 +391,8 @@ export default function CheckoutPage() {
 
           {/* Back */}
           <div className="mb-10">
-            <Link href="/cart" className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-muted-foreground hover:text-foreground transition-colors">
-              <ChevronLeft className="w-3.5 h-3.5" /> Back to bag
+            <Link href={isBuyNow ? `/products/${buyNowItem?.slug || ''}` : '/cart'} className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-muted-foreground hover:text-foreground transition-colors">
+              <ChevronLeft className="w-3.5 h-3.5" /> {isBuyNow ? 'Back to product' : 'Back to bag'}
             </Link>
           </div>
 
