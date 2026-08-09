@@ -199,18 +199,17 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* ── Hero Section with Video Background ── */}
+      {/* ── Hero Section with Responsive Banner Image ── */}
       <section className="relative min-h-[60vh] flex items-center overflow-hidden" aria-label="Hero Section">
-        {/* Video Background (poster removed to avoid missing asset 404 errors) */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover object-center z-0"
-        >
-          <source src="/The_hero_bg_image_you_have_rig.mp4" type="video/mp4" />
-        </video>
+        <Image
+          src="/assets/images/hero-banner.jpg"
+          alt="BADGER SHEILD premium black graphic t-shirt"
+          fill
+          priority
+          sizes="100vw"
+          className="absolute inset-0 z-0 object-cover object-[64%_center] sm:object-center"
+        />
+        <div className="absolute inset-0 z-[1] bg-black/15 sm:bg-transparent" aria-hidden="true" />
 
         {/* Hero Content */}
         <div className="relative z-10 container mx-auto max-w-7xl px-4 sm:px-6 py-14 md:py-20 w-full">

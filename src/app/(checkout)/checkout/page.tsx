@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Script from 'next/script';
@@ -44,7 +44,7 @@ function saveActive(d: ActivePayment) { try { localStorage.setItem(ACTIVE_KEY, J
 function readActive(): ActivePayment | null { try { const r = localStorage.getItem(ACTIVE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function clearActive() { try { localStorage.removeItem(ACTIVE_KEY); } catch {} }
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const { items, removeItem, updateQuantity, removeMultipleFromCart, isAuthenticated, isLoading } = useCart();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -581,5 +581,17 @@ export default function CheckoutPage() {
         </button>
       </div>
     </>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }
