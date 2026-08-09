@@ -688,7 +688,7 @@ export default function ProductClient({ product }: { product: Product }) {
                         ))}
                       </div>
                       {existingReview.experience ? (
-                        <p className="text-xs text-muted-foreground italic leading-relaxed">"{existingReview.experience}"</p>
+                        <p className="text-xs text-muted-foreground italic leading-relaxed">&ldquo;{existingReview.experience}&rdquo;</p>
                       ) : (
                         <p className="text-xs text-muted-foreground/60 italic">No comment shared.</p>
                       )}

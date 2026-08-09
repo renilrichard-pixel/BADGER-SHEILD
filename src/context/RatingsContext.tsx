@@ -101,7 +101,7 @@ const addProfilesToReviews = async (reviews: any[], sessionUser: any): Promise<R
         })),
       );
 
-      profilesById = resolvedProfiles.reduce((acc, profile) => {
+      profilesById = resolvedProfiles.reduce<Record<string, any>>((acc, profile) => {
         acc[profile.id] = profile;
         return acc;
       }, {});

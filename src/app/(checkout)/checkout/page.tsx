@@ -106,8 +106,6 @@ export default function CheckoutPage() {
   /* ── Poll order status ── */
   useEffect(() => {
     if (!polling || !activeOrderId || !isAuthenticated) return;
-    let timer: ReturnType<typeof setInterval>;
-
     const check = async () => {
       const sb = createClient();
       const { data: { session } } = await sb.auth.getSession();
@@ -130,7 +128,7 @@ export default function CheckoutPage() {
     };
 
     check();
-    timer = setInterval(check, 3000);
+    const timer = setInterval(check, 3000);
     const timeout = setTimeout(() => {
       clearInterval(timer);
       if (isProcessing) {
