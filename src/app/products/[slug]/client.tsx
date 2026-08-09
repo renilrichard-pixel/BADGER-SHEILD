@@ -152,7 +152,7 @@ export default function ProductClient({ product }: { product: Product }) {
       return;
     }
 
-    addItem({
+    const res = await addItem({
       productId: product._id || 'unknown',
       name: product.name || 'Product',
       slug: product.slug?.current || 'product',
@@ -162,6 +162,11 @@ export default function ProductClient({ product }: { product: Product }) {
       selectedColor,
       image: product.images?.[0] || '',
     });
+
+    if (res && typeof res === 'object' && !res.success && res.reason) {
+      toast.error(res.reason);
+      return;
+    }
 
     toast.success('Added to Bag', {
       description: `${product.name}${selectedSize ? ` · ${selectedSize}` : ''}${selectedColor ? ` / ${selectedColor}` : ''}`,

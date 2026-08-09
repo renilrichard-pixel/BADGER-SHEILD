@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/lib/hooks/use-cart';
 import { cartStore } from '@/lib/cart-store';
 import { toast } from 'sonner';
@@ -30,10 +30,15 @@ export function QuickAdd({
   sizeStock,
   stockQty = 99,
 }: QuickAddProps) {
+  const [mounted, setMounted] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
   const { items } = useCart();
 
-  const isAdded = items.some((item) => item.productId === productId);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAdded = mounted ? items.some((item) => item.productId === productId) : false;
 
   const safeSizes = sizes && sizes.length > 0 ? sizes : ['OS'];
   const safeColors = colors && colors.length > 0 ? colors : ['Default'];
@@ -45,19 +50,27 @@ export function QuickAdd({
 
     if (isAdded) return;
 
+    const { requireAuth } = await import('@/lib/require-auth');
+    const authed = await requireAuth();
+    if (!authed) return;
+
     if (totalStock <= 0) {
       toast.error('Out of stock');
       return;
     }
 
     if (safeSizes.length === 1 && safeSizes[0] === 'OS') {
-      addToCart(safeSizes[0]);
+      await addToCart(safeSizes[0]);
     } else {
       setShowSizes(true);
     }
   };
 
-  const addToCart = (selectedSize: string) => {
+  const addToCart = async (selectedSize: string) => {
+    const { requireAuth } = await import('@/lib/require-auth');
+    const authed = await requireAuth();
+    if (!authed) return;
+
     const availableStock = getSizeStockQuantity(sizeStock, selectedSize, stockQty);
     if (availableStock <= 0) {
       toast.error(`Size ${selectedSize} is out of stock`);
@@ -66,7 +79,7 @@ export function QuickAdd({
 
     const selectedColor = safeColors[0];
 
-    cartStore.addItem({
+    const res = await cartStore.addItem({
       productId,
       name,
       price,
@@ -76,6 +89,11 @@ export function QuickAdd({
       selectedColor,
       quantity: 1,
     });
+
+    if (res && !res.success && res.reason) {
+      toast.error(res.reason);
+      return;
+    }
 
     toast.success(`${name} (${selectedSize}) added to bag`);
     setShowSizes(false);

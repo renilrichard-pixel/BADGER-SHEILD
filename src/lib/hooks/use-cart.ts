@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client';
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>(() => cartStore.getItems());
+  const [stockLimits, setStockLimits] = useState<Record<string, number>>(() => cartStore.getStockLimits());
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(() => !cartStore.isInitialized());
 
@@ -13,6 +14,7 @@ export function useCart() {
     const unsubscribeCart = cartStore.subscribe(() => {
       if (isMounted) {
         setItems(cartStore.getItems());
+        setStockLimits(cartStore.getStockLimits());
         setIsLoading(!cartStore.isInitialized());
       }
     });
@@ -28,6 +30,7 @@ export function useCart() {
         await cartStore.handleAuthChange(session?.user || null);
         if (isMounted) {
           setIsLoading(false);
+          void cartStore.refreshStockLimits();
         }
       } catch (err) {
         console.error('Error checking auth session in useCart:', err);
@@ -44,6 +47,9 @@ export function useCart() {
         setIsAuthenticated(!!session);
       }
       await cartStore.handleAuthChange(session?.user || null);
+      if (isMounted) {
+        void cartStore.refreshStockLimits();
+      }
     });
 
     return () => {
@@ -59,6 +65,8 @@ export function useCart() {
   return {
     items,
     cartItems: items,
+    stockLimits,
+    refreshStockLimits: cartStore.refreshStockLimits,
     addItem: cartStore.addItem,
     addToCart: cartStore.addItem,
     updateQuantity: cartStore.updateQuantity,

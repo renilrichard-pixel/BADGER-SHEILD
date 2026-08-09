@@ -126,9 +126,98 @@ async function syncToSupabase(cart: CartItem[]) {
 let lastUserId: string | null = null;
 let isFetching = false;
 
+let stockLimits: Record<string, number> = {};
+let stockRefreshPromise: Promise<Record<string, number>> | null = null;
+let lastStockFetchTime = 0;
+let lastStockFetchCartKey = '';
+
+async function fetchStockLimitsFromApi(cart: CartItem[]): Promise<Record<string, number>> {
+  if (typeof window === 'undefined' || cart.length === 0) {
+    return {};
+  }
+  try {
+    const payload = {
+      items: cart.map(i => ({
+        productId: i.productId,
+        cartId: i.cartId,
+        selectedSize: i.selectedSize,
+      })),
+    };
+    const res = await fetch('/api/cart/stock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.stockLimits) {
+        return data.stockLimits;
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching stock limits:', err);
+  }
+  return {};
+}
+
 export const cartStore = {
   getItems(): CartItem[] {
     return [...memoryCart];
+  },
+
+  getStockLimits(): Record<string, number> {
+    return { ...stockLimits };
+  },
+
+  async refreshStockLimits(): Promise<Record<string, number>> {
+    if (typeof window === 'undefined' || memoryCart.length === 0) {
+      if (Object.keys(stockLimits).length > 0) {
+        stockLimits = {};
+        notify();
+      }
+      return stockLimits;
+    }
+
+    const currentCartKey = memoryCart.map(i => `${i.cartId}:${i.quantity}`).join('|');
+    const now = Date.now();
+
+    if (now - lastStockFetchTime < 5000 && currentCartKey === lastStockFetchCartKey) {
+      return stockLimits;
+    }
+
+    if (stockRefreshPromise) {
+      return stockRefreshPromise;
+    }
+
+    stockRefreshPromise = (async () => {
+      try {
+        const limits = await fetchStockLimitsFromApi(memoryCart);
+        stockLimits = { ...stockLimits, ...limits };
+        lastStockFetchTime = Date.now();
+        lastStockFetchCartKey = currentCartKey;
+
+        let updated = false;
+        memoryCart.forEach(item => {
+          const limit = stockLimits[item.cartId];
+          if (limit !== undefined && limit > 0 && item.quantity > limit) {
+            item.quantity = limit;
+            updated = true;
+          }
+        });
+
+        notify();
+        if (updated && lastUserId) {
+          await syncToSupabase(memoryCart);
+        } else if (updated) {
+          saveGuestCartToLocalStorage(memoryCart);
+        }
+        return stockLimits;
+      } finally {
+        stockRefreshPromise = null;
+      }
+    })();
+
+    return stockRefreshPromise;
   },
 
   isInitialized(): boolean {
@@ -250,7 +339,7 @@ export const cartStore = {
     });
   },
 
-  addItem(item: Omit<CartItem, 'cartId'>) {
+  async addItem(item: Omit<CartItem, 'cartId'>): Promise<{ success: boolean; reason?: string }> {
     if (state === 'uninitialized' || state === 'transitioning') {
       state = lastUserId ? 'authenticated' : 'guest';
       initialized = true;
@@ -261,33 +350,90 @@ export const cartStore = {
     };
     const cartId = `${normalizedItem.productId}-${normalizedItem.selectedSize}-${normalizedItem.selectedColor}`;
     const existing = memoryCart.find(i => i.cartId === cartId);
+
+    const addQty = Number(normalizedItem.quantity) || 1;
+    const currentQty = existing ? Number(existing.quantity) : 0;
+    const targetQty = currentQty + addQty;
+
+    let limit = stockLimits[cartId];
+
+    if (limit === undefined) {
+      const apiLimits = await fetchStockLimitsFromApi([{ ...normalizedItem, cartId, quantity: targetQty }]);
+      if (apiLimits[cartId] !== undefined) {
+        limit = apiLimits[cartId];
+        stockLimits[cartId] = limit;
+      }
+    }
+
+    if (limit !== undefined) {
+      if (targetQty > limit) {
+        const msg = limit === 0
+          ? `Size ${normalizedItem.selectedSize} is out of stock`
+          : `Maximum available quantity reached (${limit} available in size ${normalizedItem.selectedSize})`;
+        return { success: false, reason: msg };
+      }
+    }
+
     if (existing) {
-      existing.quantity = Number(existing.quantity) + Number(normalizedItem.quantity);
+      existing.quantity = targetQty;
     } else {
-      memoryCart.push({ ...normalizedItem, cartId, quantity: Number(normalizedItem.quantity), selected: true });
+      memoryCart.push({ ...normalizedItem, cartId, quantity: targetQty, selected: true });
     }
     notify();
     if (lastUserId) {
-      return syncToSupabase(memoryCart);
+      await syncToSupabase(memoryCart);
     } else {
       saveGuestCartToLocalStorage(memoryCart);
-      return Promise.resolve();
     }
+    return { success: true };
   },
 
-  updateQuantity(cartId: string, quantity: number) {
+  async updateQuantity(cartId: string, quantity: number): Promise<{ success: boolean; reason?: string }> {
     const existing = memoryCart.find(i => i.cartId === cartId);
-    if (existing) {
-      existing.quantity = Math.max(1, Number(quantity));
+    if (!existing) {
+      return { success: false, reason: 'Item not found in cart' };
+    }
+
+    const targetQty = Math.max(1, Number(quantity));
+
+    if (targetQty < existing.quantity) {
+      existing.quantity = targetQty;
       notify();
       if (lastUserId) {
-        return syncToSupabase(memoryCart);
+        await syncToSupabase(memoryCart);
       } else {
         saveGuestCartToLocalStorage(memoryCart);
-        return Promise.resolve();
+      }
+      return { success: true };
+    }
+
+    let limit = stockLimits[cartId];
+    if (limit === undefined) {
+      const apiLimits = await fetchStockLimitsFromApi([existing]);
+      if (apiLimits[cartId] !== undefined) {
+        limit = apiLimits[cartId];
+        stockLimits[cartId] = limit;
       }
     }
-    return Promise.resolve();
+
+    if (limit !== undefined) {
+      if (targetQty > limit) {
+        const msg = limit === 0
+          ? `Size ${existing.selectedSize} is out of stock`
+          : `Maximum available quantity reached (${limit} available in size ${existing.selectedSize})`;
+        notify();
+        return { success: false, reason: msg };
+      }
+    }
+
+    existing.quantity = targetQty;
+    notify();
+    if (lastUserId) {
+      await syncToSupabase(memoryCart);
+    } else {
+      saveGuestCartToLocalStorage(memoryCart);
+    }
+    return { success: true };
   },
 
   removeItem(cartId: string) {

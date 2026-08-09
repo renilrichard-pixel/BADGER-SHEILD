@@ -19,9 +19,27 @@ export default function CartPage() {
     clearCart,
     toggleSelection,
     isLoading,
+    stockLimits,
+    refreshStockLimits,
     isAuthenticated,
   } = useCart();
   const router = useRouter();
+
+  React.useEffect(() => {
+    if (isLoading) return;
+
+    void refreshStockLimits();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refreshStockLimits();
+    };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [isLoading, refreshStockLimits]);
 
   const selectedItems = items.filter((item) => item.selected !== false);
   
@@ -162,21 +180,55 @@ export default function CartPage() {
 
                   <div className="flex justify-between items-end mt-4">
                     {/* Quantity */}
-                    <div className="flex items-center border border-border w-fit">
-                      <button
-                        onClick={() => updateQuantity(item.cartId, item.quantity - 1)}
-                        className="px-2 py-1 sm:px-3 sm:py-1.5 hover:bg-muted transition-colors disabled:opacity-30"
-                        disabled={item.quantity <= 1}
-                      >
-                        <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                      </button>
-                      <span className="w-6 sm:w-8 text-center text-[10px] sm:text-xs font-medium">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.cartId, item.quantity + 1)}
-                        className="px-2 py-1 sm:px-3 sm:py-1.5 hover:bg-muted transition-colors"
-                      >
-                        <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                      </button>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center border border-border w-fit">
+                        <button
+                          onClick={async () => {
+                            await updateQuantity(item.cartId, item.quantity - 1);
+                          }}
+                          className="px-2 py-1 sm:px-3 sm:py-1.5 hover:bg-muted transition-colors disabled:opacity-30"
+                          disabled={item.quantity <= 1}
+                        >
+                          <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        </button>
+                        <span className="w-6 sm:w-8 text-center text-[10px] sm:text-xs font-medium">{item.quantity}</span>
+                        {(() => {
+                          const limit = stockLimits[item.cartId];
+                          const isMaxReached = limit !== undefined && item.quantity >= limit;
+                          return (
+                            <button
+                              onClick={async () => {
+                                if (isMaxReached) {
+                                  toast.error('Maximum available quantity reached');
+                                  return;
+                                }
+                                const res = await updateQuantity(item.cartId, item.quantity + 1);
+                                if (res && typeof res === 'object' && !res.success && res.reason) {
+                                  toast.error(res.reason);
+                                }
+                              }}
+                              className="px-2 py-1 sm:px-3 sm:py-1.5 hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                              disabled={isMaxReached}
+                              aria-label={isMaxReached ? "Maximum available quantity reached" : "Increase quantity"}
+                              title={isMaxReached ? "Maximum available quantity reached" : "Increase quantity"}
+                            >
+                              <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                            </button>
+                          );
+                        })()}
+                      </div>
+                      {(() => {
+                        const limit = stockLimits[item.cartId];
+                        const isMaxReached = limit !== undefined && item.quantity >= limit;
+                        if (isMaxReached) {
+                          return (
+                            <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider">
+                              Max quantity reached
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
                     {/* Remove */}

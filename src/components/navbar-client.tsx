@@ -240,6 +240,11 @@ export function NavbarSearch() {
 
 export function CartButton() {
   const { totalCount } = useCart();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <Button 
@@ -250,7 +255,7 @@ export function CartButton() {
       nativeButton={false}
     >
       <ShoppingBag className="h-5 w-5" />
-      {totalCount > 0 && (
+      {mounted && totalCount > 0 && (
         <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-in scale-in duration-300">
           {totalCount}
         </span>

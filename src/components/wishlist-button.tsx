@@ -20,15 +20,21 @@ export function WishlistButton({
   image,
   slug,
 }: WishlistButtonProps) {
-  const [isWishlisted, setIsWishlisted] = useState(() => wishlistStore.hasItem(productId));
+  const [mounted, setMounted] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setIsWishlisted(wishlistStore.hasItem(productId));
+
     const unsubscribe = wishlistStore.subscribe(() => {
       setIsWishlisted(wishlistStore.hasItem(productId));
     });
 
     return () => unsubscribe();
   }, [productId]);
+
+  const active = mounted && isWishlisted;
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -42,7 +48,7 @@ export function WishlistButton({
       slug,
     });
 
-    if (isWishlisted) {
+    if (active) {
       toast.success(`Removed ${name} from wishlist`);
     } else {
       toast.success(`Added ${name} to wishlist`);
@@ -53,11 +59,11 @@ export function WishlistButton({
     <button
       onClick={handleToggle}
       className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 border bg-background/90 backdrop-blur-sm border-border/60 hover:bg-foreground hover:text-background ${
-        isWishlisted ? 'bg-foreground text-background border-foreground' : 'text-foreground'
+        active ? 'bg-foreground text-background border-foreground' : 'text-foreground'
       }`}
-      aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+      aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}
     >
-      <Heart className={`w-3 h-3 ${isWishlisted ? 'fill-current' : ''}`} />
+      <Heart className={`w-3 h-3 ${active ? 'fill-current' : ''}`} />
     </button>
   );
 }
