@@ -133,6 +133,28 @@ export async function confirmOrderWithStockResult(
       await transaction.commit();
     } catch (sanityErr: any) {
       console.error('Failed to decrement Sanity stock during order confirmation:', sanityErr?.message || sanityErr);
+
+      // Do not leave a paid order marked as confirmed when inventory could not
+      // be decremented. Returning it to pending lets the verified payment flow
+      // retry fulfillment instead of silently allowing inventory to drift.
+      const { error: rollbackError } = await supabaseAdmin
+        .from('orders')
+        .update({
+          status: 'pending',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('order_id', confirmed.order_id)
+        .eq('status', 'confirmed');
+
+      if (rollbackError) {
+        throw new Error(
+          `Stock decrement failed and the order could not be returned to pending: ${rollbackError.message}`
+        );
+      }
+
+      throw new Error(
+        `Stock decrement failed; order was returned to pending for a safe retry: ${sanityErr?.message || String(sanityErr)}`
+      );
     }
   }
 
