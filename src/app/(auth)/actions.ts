@@ -10,6 +10,34 @@ function normalizeEmail(value: FormDataEntryValue | null) {
   return String(value || '').trim().toLowerCase()
 }
 
+function getSiteUrl() {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL
+
+  if (!configuredUrl) {
+    throw new Error('NEXT_PUBLIC_SITE_URL must be configured')
+  }
+
+  let siteUrl: URL
+  try {
+    siteUrl = new URL(configuredUrl)
+  } catch {
+    throw new Error('NEXT_PUBLIC_SITE_URL must be a valid absolute URL')
+  }
+
+  if (
+    !['http:', 'https:'].includes(siteUrl.protocol) ||
+    siteUrl.username ||
+    siteUrl.password ||
+    siteUrl.pathname !== '/' ||
+    siteUrl.search ||
+    siteUrl.hash
+  ) {
+    throw new Error('NEXT_PUBLIC_SITE_URL must be an HTTP(S) origin without a path, query, or fragment')
+  }
+
+  return siteUrl
+}
+
 export async function login(formData: FormData) {
   const requestHeaders = await headers()
   const rateLimit = await checkRateLimit({
@@ -112,12 +140,11 @@ export async function forgotPassword(formData: FormData) {
     redirect(`/forgot-password?error=${encodeURIComponent('Email is required')}`)
   }
 
-  const host = requestHeaders.get('host')
-  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-  const origin = `${protocol}://${host}`
+  const resetRedirectUrl = new URL('/api/auth/callback', getSiteUrl())
+  resetRedirectUrl.searchParams.set('next', '/reset-password')
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/api/auth/callback?next=/reset-password`,
+    redirectTo: resetRedirectUrl.toString(),
   })
 
   if (error) {
