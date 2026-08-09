@@ -216,12 +216,6 @@ export default function Home() {
         <div className="relative z-10 container mx-auto max-w-7xl px-4 sm:px-6 py-14 md:py-20 w-full">
           <div className="max-w-2xl space-y-8">
 
-            {/* Eyebrow badge */}
-            <div className="inline-flex items-center border border-white/25 bg-white/10 backdrop-blur-md px-4 py-2 text-[10px] font-bold uppercase tracking-[0.28em] text-white/80">
-              <span className="mr-2 h-1.5 w-1.5 rounded-full bg-white/60 animate-pulse" />
-              Premium Menswear Essentials
-            </div>
-
             {/* Headline */}
             <div className="space-y-4">
               <h1 className="text-4xl font-black uppercase leading-[0.93] tracking-tight text-white sm:text-5xl lg:text-6xl">

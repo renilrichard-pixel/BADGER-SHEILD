@@ -24,6 +24,11 @@ export const BRAND_POLICIES = {
     DISCLAIMER_TEXT: 'BADGER SHEILD operates on a strict replacement-only policy. We do not offer monetary refunds under any circumstances.',
     ELIGIBILITY_TYPES: ['Damaged products', 'Defective products', 'Incorrect products received'] as const,
   },
+  SUPPORT: {
+    AVAILABLE_24_7: true,
+    TEXT: 'Customer Support Available 24/7',
+    STATUS_TEXT: 'Open 24/7',
+  },
 } as const;
 
 export const SHIPPING_FEE = BRAND_POLICIES.SHIPPING.FEE;

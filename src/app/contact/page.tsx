@@ -64,11 +64,13 @@ export default function ContactPage() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">CALL US</h3>
-                <p className="text-sm font-semibold text-foreground">
-                  +91 6238393614
+                <p className="text-sm font-semibold">
+                  <a href="tel:+916238393614" className="text-foreground hover:underline transition-colors">
+                    +91 6238393614
+                  </a>
                 </p>
                 <p className="text-xs text-muted-foreground leading-relaxed pt-0.5">
-                  Mon–Sat | Business Hours
+                  {BRAND_POLICIES.SUPPORT.TEXT}
                 </p>
               </div>
             </div>
@@ -78,18 +80,11 @@ export default function ContactPage() {
               <div className="p-2.5 rounded-full bg-muted/65 border border-border/50 text-foreground shrink-0">
                 <Clock className="w-4 h-4" />
               </div>
-              <div className="space-y-2.5 flex-1">
+              <div className="space-y-1 flex-1">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">OPERATING HOURS</h3>
-                <div className="space-y-1.5 text-xs text-muted-foreground">
-                  <div className="flex justify-between items-center border-b border-border/40 pb-1.5">
-                    <span>Mon–Sat</span>
-                    <span className="font-semibold text-foreground">9:00 AM – 6:00 PM</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-0.5">
-                    <span>Sunday</span>
-                    <span className="font-semibold text-foreground">Closed</span>
-                  </div>
-                </div>
+                <p className="text-sm font-semibold text-foreground pt-0.5">
+                  {BRAND_POLICIES.SUPPORT.STATUS_TEXT}
+                </p>
               </div>
             </div>
 
