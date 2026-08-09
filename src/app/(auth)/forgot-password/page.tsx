@@ -1,6 +1,4 @@
 import Link from 'next/link';
-import { ArrowRight, KeyRound, Quote, Shirt, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { forgotPassword } from '../actions';
 import { AuthSubmitButton, AuthFormBody } from '@/components/auth-form';
 
@@ -8,104 +6,31 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
   const params = await searchParams;
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-muted/20 p-4 text-foreground sm:p-8">
-      <div className="mx-auto grid w-full max-w-5xl overflow-hidden border border-border/10 bg-background shadow-2xl md:min-h-[620px] lg:w-[72%] lg:grid-cols-[1.08fr_0.92fr]">
-        <section className="hidden bg-[#151311] px-8 py-8 text-white lg:flex lg:flex-col lg:justify-between">
-          <div className="flex items-center justify-between gap-6">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center border border-white/25 bg-white text-xl font-black text-[#151311]">B</span>
-              <span className="leading-none">
-                <span className="block text-sm font-black uppercase tracking-[0.28em]">Badger</span>
-                <span className="block text-sm font-black uppercase tracking-[0.28em]">Sheild</span>
-              </span>
-            </Link>
-            <span className="border border-white/15 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/65">Menswear</span>
-          </div>
+    <main className="flex justify-center bg-muted/20 px-4 py-8 text-foreground sm:px-8 sm:py-10">
+      <section className="w-full max-w-md border border-border bg-background p-6 shadow-sm lg:max-w-2xl sm:p-8">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-black uppercase tracking-tight">Reset password</h1>
+          <p className="text-sm text-muted-foreground">Enter your email and we’ll send a password reset link.</p>
+        </div>
 
-          <div className="max-w-md space-y-8">
-            <div className="inline-flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white/75">
-              <Shirt className="h-3.5 w-3.5" />
-              Heavyweight essentials
-            </div>
-            <div className="space-y-5">
-              <Quote className="h-9 w-9 text-white/30" />
-              <p className="font-serif text-4xl italic leading-tight text-white">
-                Clean silhouettes, strong fabric, quiet confidence.
-              </p>
-              <div className="h-px w-16 bg-white/25" />
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/55">
-                Built for modern T-shirt rotations
-              </p>
-            </div>
-          </div>
+        <form action={forgotPassword}>
+          <AuthFormBody>
+            {params?.message && <div className="border border-emerald-200 bg-emerald-50/10 px-4 py-3 text-xs font-semibold text-emerald-600">{params.message}</div>}
+            {params?.error && <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">{params.error}</div>}
 
-          <div className="grid grid-cols-3 gap-3 border-t border-white/15 pt-6 text-[10px] uppercase tracking-[0.16em] text-white/60">
-            <span>Premium cotton</span>
-            <span>Modern cuts</span>
-            <span>Fast checkout</span>
-          </div>
-        </section>
+            <label className="block space-y-2" htmlFor="email">
+              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Email address</span>
+              <input id="email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required className="h-12 w-full border border-border bg-background px-4 text-sm lowercase text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground" placeholder="you@example.com" />
+            </label>
+            <AuthSubmitButton defaultText="Send reset link" loadingText="Sending reset link..." />
+          </AuthFormBody>
+        </form>
 
-        <section className="flex items-center px-6 py-10 sm:px-10 lg:px-12">
-          <div className="mx-auto w-full max-w-sm">
-            <div className="mb-10 lg:hidden">
-              <Link href="/" className="text-sm font-black uppercase tracking-[0.28em]">Badger Sheild</Link>
-            </div>
-
-            <div className="mb-8 space-y-4">
-              <div className="inline-flex items-center gap-2 border border-border bg-background/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-foreground">
-                <KeyRound className="h-3.5 w-3.5" />
-                Password recovery
-              </div>
-              <div className="space-y-3">
-                <h2 className="text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">Recover</h2>
-                <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-                  Enter your email address and we will send you a link to reset your password.
-                </p>
-              </div>
-            </div>
-
-            <form action={forgotPassword}>
-              <AuthFormBody>
-                {params?.message && (
-                  <div className="border border-emerald-200 bg-emerald-50/10 px-4 py-3 text-xs font-semibold text-emerald-600">
-                    {params.message}
-                  </div>
-                )}
-                {params?.error && (
-                  <div className="border border-red-200 bg-red-50/10 px-4 py-3 text-xs font-semibold text-red-600">
-                    {params.error}
-                  </div>
-                )}
-
-                <label className="block space-y-2" htmlFor="email">
-                  <span className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">Email address</span>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    required
-                    className="h-12 w-full border border-border bg-background px-4 text-sm lowercase outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground text-foreground"
-                    placeholder="you@example.com"
-                  />
-                </label>
-
-                <AuthSubmitButton defaultText="SEND RESET LINK" loadingText="SENDING RESET LINK..." />
-              </AuthFormBody>
-            </form>
-
-            <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-              <span>Remember your password?</span>
-              <Link href="/login" className="inline-flex items-center gap-2 font-black uppercase tracking-[0.16em] text-foreground hover:underline underline-offset-4">
-                Sign in <Sparkles className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-        </section>
-      </div>
+        <p className="mt-6 border-t border-border pt-6 text-center text-xs text-muted-foreground">
+          Remembered your password?{' '}
+          <Link href="/login" className="font-bold text-foreground hover:underline underline-offset-4">Sign in</Link>
+        </p>
+      </section>
     </main>
   );
 }
