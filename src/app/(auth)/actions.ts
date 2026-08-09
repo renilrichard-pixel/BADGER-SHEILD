@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit'
+import { getSafeRedirectPath } from '@/lib/safe-redirect'
 
 function normalizeEmail(value: FormDataEntryValue | null) {
   return String(value || '').trim().toLowerCase()
@@ -51,7 +52,7 @@ export async function login(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const next = formData.get('next') as string || '/'
+  const next = getSafeRedirectPath(formData.get('next'))
 
   const data = {
     email: normalizeEmail(formData.get('email')),
@@ -81,7 +82,7 @@ export async function signup(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const next = formData.get('next') as string || '/'
+  const next = getSafeRedirectPath(formData.get('next'))
   const fullName = String(formData.get('fullName') || '').trim()
 
   const data = {
