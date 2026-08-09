@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import Script from 'next/script';
 import { ArrowRight, RotateCcw, ShieldCheck, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NewsletterForm } from '@/components/newsletter-form';
@@ -194,20 +195,22 @@ function ProductGridSkeleton() {
 export default function Home() {
   return (
     <main className="min-h-screen bg-background text-foreground" id="main-content">
-      <script
+      <Script
+        id="badger-sheild-structured-data"
         type="application/ld+json"
+        strategy="beforeInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       {/* ── Hero Section with Responsive Banner Image ── */}
       <section className="relative min-h-[60vh] flex items-center overflow-hidden" aria-label="Hero Section">
         <Image
-          src="/assets/images/hero-banner.jpg"
+          src="/assets/images/hero-banner.png"
           alt="BADGER SHEILD premium black graphic t-shirt"
           fill
           priority
           sizes="100vw"
-          className="absolute inset-0 z-0 object-cover object-[64%_center] sm:object-center"
+          className="absolute inset-0 z-0 object-cover object-[64%_top] sm:object-top"
         />
         <div className="absolute inset-0 z-[1] bg-black/15 sm:bg-transparent" aria-hidden="true" />
 
