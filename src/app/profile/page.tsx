@@ -895,7 +895,7 @@ export default function ProfilePage() {
                               <div className="lg:col-span-2 space-y-6">
                                 <h4 className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground mb-4 pb-2 border-b border-border/40">Purchased Items</h4>
                                 {Array.isArray(order.items) ? order.items.map((item: any, idx: number) => (
-                                  <Link key={idx} href={`/products/${item.slug || item.id}`} className="flex gap-4 items-center group cursor-pointer">
+                                  <Link key={idx} href={`/products/${item.slug || item.productId || ''}`} className="flex gap-4 items-center group cursor-pointer">
                                     <div className="w-14 h-18 bg-muted border border-border flex items-center justify-center shrink-0 overflow-hidden relative">
                                         {item.image ? (
                                           <Image

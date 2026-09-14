@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { cartStore } from '@/lib/cart-store';
 import { saveBuyNowItem } from '@/lib/buy-now';
-import { requireAuth } from '@/lib/require-auth';
 import { getFirstAvailableSize, getSizeStockQuantity, getTotalStock, type SizeStockEntry } from '@/lib/sizeStock';
 
 interface ProductCardActionsProps {
@@ -48,8 +47,7 @@ export function ProductCardActions({ productId, name, slug, price, image, sizes,
     }
 
     saveBuyNowItem({ productId, name, slug, price, image, quantity: 1, selectedSize, selectedColor });
-    const authed = await requireAuth('/checkout?buy-now=1');
-    if (authed) router.push('/checkout?buy-now=1');
+    router.push('/checkout?buy-now=1');
   };
 
   return (

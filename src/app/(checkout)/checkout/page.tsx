@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, Lock, MapPin, CreditCard, RotateCcw, Package } from 'lucide-react';
+import { ChevronLeft, Lock, MapPin, CreditCard, RotateCcw, Package, User, Plus } from 'lucide-react';
 import { useCart } from '@/lib/hooks/use-cart';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -57,12 +57,37 @@ function CheckoutContent() {
   const [payMethod, setPayMethod] = useState<PayMethod>('upi');
   const [isProcessing, setIsProcessing] = useState(false);
   const [rzpReady, setRzpReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [activeCartIds, setActiveCartIds] = useState<string[]>([]);
   const [polling, setPolling] = useState(false);
   const finalizing = useRef(false);
   const [buyNowItem, setBuyNowItem] = useState<CartItem | null>(null);
   const [buyNowReady, setBuyNowReady] = useState(!isBuyNow);
+  const [useNewAddress, setUseNewAddress] = useState(false);
+  const [guestForm, setGuestForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+  });
+
+  useEffect(() => {
+    if (user?.email && !guestForm.email) {
+      setGuestForm(prev => ({ ...prev, email: user.email }));
+    }
+  }, [user, guestForm.email]);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      setRzpReady(true);
+    }
+  }, []);
 
   const selectedItems = buyNowItem ? [buyNowItem] : items.filter(i => i.selected !== false);
   const subtotal = selectedItems.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -173,17 +198,92 @@ function CheckoutContent() {
     toast.success('Reset. You can try again.');
   }, []);
 
+const loadRazorpayScript = () => {
+  return new Promise<boolean>((resolve) => {
+    if (typeof window === 'undefined') return resolve(false);
+    if ((window as any).Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
   /* ── Launch Razorpay ── */
   const launchRazorpay = useCallback(async () => {
-    if (!window.Razorpay) { toast.error('Payment SDK not ready. Refresh and try again.'); return; }
-    if (!selectedAddr) { toast.error('Select a delivery address first.'); return; }
+    if (!window.Razorpay) {
+      const loaded = await loadRazorpayScript();
+      if (!loaded || !window.Razorpay) {
+        toast.error('Payment gateway could not be loaded. Please check your internet or ad-blocker and try again.');
+        return;
+      }
+    }
     if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
       toast.error('Razorpay public key not configured. Add NEXT_PUBLIC_RAZORPAY_KEY_ID to your env file.');
       return;
     }
 
-    const addr = addresses.find(a => a.id === selectedAddr);
-    if (!addr) return;
+    const usingSavedAddr = Boolean(user && addresses.length > 0 && !useNewAddress);
+    const addr = usingSavedAddr ? addresses.find(a => a.id === selectedAddr) : null;
+
+    if (usingSavedAddr && !addr) {
+      toast.error('Select a delivery address first.');
+      return;
+    }
+
+    if (!usingSavedAddr) {
+      if (!guestForm.first_name.trim()) {
+        toast.error('Please enter your first name.');
+        const el = document.getElementById('checkout-first-name');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return;
+      }
+      if (!guestForm.email.trim() || !guestForm.email.includes('@')) {
+        toast.error('Please enter a valid email address.');
+        const el = document.getElementById('checkout-email');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return;
+      }
+      if (!guestForm.phone.trim() || guestForm.phone.trim().length < 8) {
+        toast.error('Please enter a valid phone number (at least 10 digits).');
+        const el = document.getElementById('checkout-phone');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return;
+      }
+      if (!guestForm.address.trim()) {
+        toast.error('Please enter your delivery street address.');
+        const el = document.getElementById('checkout-address');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return;
+      }
+      if (!guestForm.city.trim()) {
+        toast.error('Please enter your city.');
+        const el = document.getElementById('checkout-city');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return;
+      }
+      if (!guestForm.state.trim()) {
+        toast.error('Please enter your state.');
+        const el = document.getElementById('checkout-state');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return;
+      }
+      if (!guestForm.pincode.trim()) {
+        toast.error('Please enter your PIN code.');
+        const el = document.getElementById('checkout-pincode');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return;
+      }
+    }
 
     setIsProcessing(true);
     finalizing.current = false;
@@ -215,7 +315,7 @@ function CheckoutContent() {
       return;
     }
 
-    /* 2 — Create Razorpay order on server (which also registers pending order) */
+    /* 2 — Create Razorpay order on server */
     const rzpRes = await fetch('/api/checkout/razorpay/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -228,7 +328,7 @@ function CheckoutContent() {
           selectedSize: i.selectedSize,
           selectedColor: i.selectedColor,
         })),
-        addressId: selectedAddr,
+        ...(usingSavedAddr && addr ? { addressId: addr.id } : { guestAddress: guestForm }),
         paymentMethod: payMethod,
       }),
     }).catch(() => null);
@@ -273,17 +373,24 @@ function CheckoutContent() {
       description: `Order ${orderId}`,
       order_id: rzpOrder.id,
       prefill: {
-        name: `${addr.first_name} ${addr.last_name}`.trim(),
-        contact: addr.phone ?? '',
-        email: user?.email ?? '',
+        name: addr ? `${addr.first_name} ${addr.last_name}`.trim() : `${guestForm.first_name} ${guestForm.last_name}`.trim(),
+        contact: addr ? (addr.phone ?? '') : guestForm.phone,
+        email: addr ? (user?.email ?? '') : guestForm.email,
       },
       notes: { order_id: orderId },
       theme: { color: '#0a0a0a', hide_topbar: false },
       config: {
         display: {
-          blocks: { [payMethod]: { name: payMethod === 'upi' ? 'Pay via UPI' : 'Net Banking', instruments: [{ method: payMethod }] } },
+          blocks: {
+            [payMethod]: {
+              name: payMethod === 'upi' ? 'Pay via UPI / QR Code' : 'Net Banking',
+              instruments: payMethod === 'upi'
+                ? [{ method: 'upi', flows: ['qr', 'intent'] }]
+                : [{ method: 'netbanking' }],
+            },
+          },
           sequence: [`block.${payMethod}`],
-          preferences: { show_default_blocks: false },
+          preferences: { show_default_blocks: true },
         },
       },
       handler: async (response: any) => {
@@ -343,28 +450,24 @@ function CheckoutContent() {
     });
 
     rzp.open();
-  }, [selectedAddr, addresses, selectedItems, payMethod, user, removeItem, updateQuantity, removeMultipleFromCart, router, buyNowItem]);
+  }, [selectedAddr, addresses, selectedItems, payMethod, user, removeItem, updateQuantity, removeMultipleFromCart, router, buyNowItem, useNewAddress, guestForm]);
+
+  const isAddressValid = (user && addresses.length > 0 && !useNewAddress)
+    ? Boolean(selectedAddr)
+    : Boolean(
+        guestForm.first_name.trim() &&
+        guestForm.phone.trim().length >= 8 &&
+        guestForm.address.trim() &&
+        guestForm.city.trim() &&
+        guestForm.state.trim() &&
+        guestForm.pincode.trim() &&
+        guestForm.email.trim().includes('@')
+      );
 
   /* ── Guards ── */
-  if (isLoading) return (
+  if (!mounted || isLoading || !buyNowReady) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-
-  if (!buyNowReady) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-
-  if (!isAuthenticated) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-5 text-center px-4">
-      <Lock className="w-8 h-8 text-muted-foreground" strokeWidth={1} />
-      <h1 className="text-xl font-bold uppercase tracking-wider">Sign in to checkout</h1>
-      <Link href={`/login?next=${encodeURIComponent(isBuyNow ? '/checkout?buy-now=1' : '/checkout')}`} className="border border-foreground bg-foreground text-background px-8 py-3 text-[10px] font-black uppercase tracking-[0.3em] hover:opacity-80 transition-opacity">
-        Sign In
-      </Link>
     </div>
   );
 
@@ -397,10 +500,31 @@ function CheckoutContent() {
           </div>
 
           {/* Page title */}
-          <div className="mb-12 border-b border-border/40 pb-8">
+          <div className="mb-10 border-b border-border/40 pb-8">
             <p className="text-[10px] uppercase tracking-[0.45em] text-muted-foreground mb-2 font-semibold">Secure Checkout</p>
             <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter">Complete Order</h1>
           </div>
+
+          {/* Sign-in prompt for guest users */}
+          {!user && (
+            <div className="mb-8 border border-border/80 bg-muted/20 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center shrink-0 bg-background">
+                  <User className="w-4 h-4 text-foreground" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider">Have an account?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Sign in for faster checkout & saved addresses, or continue as guest below.</p>
+                </div>
+              </div>
+              <Link
+                href={`/login?next=${encodeURIComponent(isBuyNow ? '/checkout?buy-now=1' : '/checkout')}`}
+                className="inline-flex items-center justify-center border border-foreground bg-foreground text-background px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-85 transition-opacity whitespace-nowrap self-start sm:self-auto"
+              >
+                Sign In
+              </Link>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10 items-start">
 
@@ -416,9 +540,20 @@ function CheckoutContent() {
                       <MapPin className="w-3.5 h-3.5" /> Delivery Address
                     </span>
                   </div>
-                  <Link href="/profile" className="text-[9px] uppercase tracking-[0.2em] font-bold text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-foreground">
-                    Manage →
-                  </Link>
+                  {user && addresses.length > 0 && (
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setUseNewAddress(!useNewAddress)}
+                        className="text-[9px] uppercase tracking-[0.2em] font-bold text-foreground hover:underline"
+                      >
+                        {useNewAddress ? '← Use Saved' : '+ New Address'}
+                      </button>
+                      <Link href="/profile" className="text-[9px] uppercase tracking-[0.2em] font-bold text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-foreground">
+                        Manage →
+                      </Link>
+                    </div>
+                  )}
                 </div>
 
                 {loadingAddr ? (
@@ -426,14 +561,7 @@ function CheckoutContent() {
                     <div className="w-4 h-4 border border-foreground border-t-transparent rounded-full animate-spin" />
                     <span className="text-xs text-muted-foreground">Loading addresses…</span>
                   </div>
-                ) : addresses.length === 0 ? (
-                  <div className="border border-dashed border-border p-8 text-center space-y-4">
-                    <p className="text-xs text-muted-foreground">No saved addresses.</p>
-                    <Link href="/profile" className="inline-block border border-foreground px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-foreground hover:text-background transition-colors">
-                      Add Address
-                    </Link>
-                  </div>
-                ) : (
+                ) : user && addresses.length > 0 && !useNewAddress ? (
                   <div className="space-y-3">
                     {addresses.map(addr => (
                       <button
@@ -460,6 +588,126 @@ function CheckoutContent() {
                       </button>
                     ))}
                   </div>
+                ) : (
+                  <div className="space-y-4 border border-border/60 bg-muted/5 p-5">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground">
+                        {!user ? 'Guest Shipping Details' : 'New Delivery Address'}
+                      </p>
+                      {!user && (
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          No password required
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">First Name *</label>
+                        <input
+                          id="checkout-first-name"
+                          type="text"
+                          value={guestForm.first_name}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, first_name: e.target.value }))}
+                          placeholder="e.g. Rahul"
+                          className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Last Name</label>
+                        <input
+                          id="checkout-last-name"
+                          type="text"
+                          value={guestForm.last_name}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, last_name: e.target.value }))}
+                          placeholder="e.g. Sharma"
+                          className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Email Address *</label>
+                        <input
+                          id="checkout-email"
+                          type="email"
+                          value={guestForm.email}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="e.g. rahul@example.com"
+                          className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                          required
+                        />
+                        <span className="text-[9px] text-muted-foreground mt-1 block">Order invoice & tracking link will be sent here</span>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Phone Number *</label>
+                        <input
+                          id="checkout-phone"
+                          type="tel"
+                          value={guestForm.phone}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="e.g. +91 98765 43210"
+                          className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                          required
+                        />
+                        <span className="text-[9px] text-muted-foreground mt-1 block">For delivery coordination</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Street Address / House / Flat *</label>
+                      <input
+                        id="checkout-address"
+                        type="text"
+                        value={guestForm.address}
+                        onChange={(e) => setGuestForm(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="e.g. Flat 402, Green Valley Apartments, MG Road"
+                        className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">City *</label>
+                        <input
+                          id="checkout-city"
+                          type="text"
+                          value={guestForm.city}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, city: e.target.value }))}
+                          placeholder="e.g. Mumbai"
+                          className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">State *</label>
+                        <input
+                          id="checkout-state"
+                          type="text"
+                          value={guestForm.state}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, state: e.target.value }))}
+                          placeholder="e.g. Maharashtra"
+                          className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">PIN Code *</label>
+                        <input
+                          id="checkout-pincode"
+                          type="text"
+                          value={guestForm.pincode}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, pincode: e.target.value }))}
+                          placeholder="e.g. 400001"
+                          className="w-full border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </section>
 
@@ -477,8 +725,8 @@ function CheckoutContent() {
               {/* Desktop CTA */}
               <button
                 onClick={launchRazorpay}
-                disabled={isProcessing || !rzpReady || !selectedAddr}
-                className="hidden md:flex w-full items-center justify-center gap-3 bg-foreground text-background py-4 text-[11px] font-black uppercase tracking-[0.3em] hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={isProcessing}
+                className="hidden md:flex w-full items-center justify-center gap-3 bg-foreground text-background py-4 text-[11px] font-black uppercase tracking-[0.3em] hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isProcessing
                   ? <><div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" /> Processing…</>
@@ -570,7 +818,7 @@ function CheckoutContent() {
         </div>
         <button
           onClick={isProcessing ? resetCheckout : launchRazorpay}
-          disabled={!isProcessing && (!rzpReady || !selectedAddr)}
+          disabled={isProcessing}
           className={`flex items-center gap-2 px-7 py-3.5 text-[10px] font-black uppercase tracking-[0.25em] transition-all disabled:opacity-40
             ${isProcessing ? 'bg-muted text-foreground border border-foreground' : 'bg-foreground text-background hover:opacity-85'}`}
         >

@@ -29,6 +29,10 @@ export const BRAND_POLICIES = {
     TEXT: 'Customer Support Available 24/7',
     STATUS_TEXT: 'Open 24/7',
   },
+  ADDRESS: {
+    REGISTERED_OFFICE: 'BADGER SHEILD HQ, Industrial Area, Ernakulam, Kerala - 682001, India',
+    RETURN_WAREHOUSE: 'BADGER SHEILD Returns & Logistics Center, Door No. 12/450, Ernakulam, Kerala - 682001, India',
+  },
 } as const;
 
 export const SHIPPING_FEE = BRAND_POLICIES.SHIPPING.FEE;

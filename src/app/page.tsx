@@ -1,6 +1,5 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import Script from 'next/script';
 import { ArrowRight, RotateCcw, ShieldCheck, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NewsletterForm } from '@/components/newsletter-form';
@@ -195,10 +194,8 @@ function ProductGridSkeleton() {
 export default function Home() {
   return (
     <main className="min-h-screen bg-background text-foreground" id="main-content">
-      <Script
-        id="badger-sheild-structured-data"
+      <script
         type="application/ld+json"
-        strategy="beforeInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 

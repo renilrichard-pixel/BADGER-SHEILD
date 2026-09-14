@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { CheckCircle2, Package, ArrowRight, Download, Printer } from 'lucide-react';
+import { client } from '@/sanity/lib/client';
 
 interface OrderItem {
   name: string;
@@ -10,6 +12,9 @@ interface OrderItem {
   price: number;
   selectedSize?: string;
   selectedColor?: string;
+  image?: string;
+  productId?: string;
+  slug?: string;
 }
 
 interface OrderData {
@@ -37,8 +42,57 @@ export default function OrderConfirmationPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('lastOrder');
-      if (stored) setOrder(JSON.parse(stored));
-    } catch { /* ignore */ }
+      if (stored) {
+        const parsed: OrderData = JSON.parse(stored);
+        setOrder(parsed);
+
+        // Check if any items are missing an image; if so, fetch directly from Sanity
+        const missingImageItems = (parsed.items || []).filter(
+          (it) => !it.image && (it.productId || it.slug)
+        );
+
+        if (missingImageItems.length > 0) {
+          const productIds = missingImageItems.map((it) => it.productId).filter(Boolean);
+          const slugs = missingImageItems.map((it) => it.slug).filter(Boolean);
+
+          client
+            .fetch<Array<{ _id: string; slug?: string; image?: string }>>(
+              `*[_type == "product" && (_id in $productIds || slug.current in $slugs)] {
+                _id,
+                "slug": slug.current,
+                "image": coalesce(images[0].asset->url, image.asset->url)
+              }`,
+              { productIds, slugs }
+            )
+            .then((sanityProducts) => {
+              if (sanityProducts && sanityProducts.length > 0) {
+                setOrder((prev) => {
+                  if (!prev) return prev;
+                  const updatedItems = (prev.items || []).map((it) => {
+                    if (it.image) return it;
+                    const match = sanityProducts.find(
+                      (p) => p._id === it.productId || (it.slug && p.slug === it.slug)
+                    );
+                    return match?.image ? { ...it, image: match.image } : it;
+                  });
+                  const updatedOrder = { ...prev, items: updatedItems };
+                  try {
+                    localStorage.setItem('lastOrder', JSON.stringify(updatedOrder));
+                  } catch {
+                    /* ignore */
+                  }
+                  return updatedOrder;
+                });
+              }
+            })
+            .catch((err) => {
+              console.warn('Failed to fetch fallback images from Sanity:', err);
+            });
+        }
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const orderId   = order?.id || order?.order_id || '—';
@@ -124,10 +178,13 @@ export default function OrderConfirmationPage() {
     <tbody>
       ${items.map(item => `
       <tr>
-        <td>
-          ${item.name || 'Item'}
-          ${item.selectedSize ? `<br/><span class="opt">Size: ${item.selectedSize}</span>` : ''}
-          ${item.selectedColor ? `<span class="opt">${item.selectedSize ? ' / ' : '<br/>'}Color: ${item.selectedColor}</span>` : ''}
+        <td style="display: flex; align-items: center; gap: 10px;">
+          ${item.image ? `<img src="${item.image}" alt="${item.name || 'Item'}" style="width: 36px; height: 46px; object-fit: cover; border-radius: 2px; border: 1px solid #eee;" />` : ''}
+          <div>
+            <strong>${item.name || 'Item'}</strong>
+            ${item.selectedSize ? `<br/><span class="opt">Size: ${item.selectedSize}</span>` : ''}
+            ${item.selectedColor ? `<span class="opt">${item.selectedSize ? ' / ' : '<br/>'}Color: ${item.selectedColor}</span>` : ''}
+          </div>
         </td>
         <td>${item.quantity}</td>
         <td>${money(item.price)}</td>
@@ -208,8 +265,21 @@ export default function OrderConfirmationPage() {
                 <div className="divide-y divide-border/30">
                   {items.map((item, i) => (
                     <div key={i} className="flex items-center gap-4 p-4">
-                      <div className="w-12 h-14 bg-muted flex-shrink-0 flex items-center justify-center">
-                        <Package className="w-4 h-4 text-muted-foreground/30" />
+                      <div className="w-14 h-18 bg-muted shrink-0 relative overflow-hidden border border-border/30 rounded-sm">
+                        {item.image ? (
+                          <Image
+                            src={item.image}
+                            alt={item.name || 'Product item'}
+                            fill
+                            sizes="56px"
+                            className="w-full h-full object-cover"
+                            priority={i === 0}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-4 h-4 text-muted-foreground/30" />
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{item.name}</p>

@@ -127,29 +127,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ verified: false, error: 'Signature mismatch.' }, { status: 400 });
     }
 
-    // 2. Authenticate user
+    // 2. Authenticate user (optional for guest checkout)
     const supabase = await createSupabaseServer();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      logEvent('WARN', 'Authorization Failure', { reason: authError?.message || 'No active user session', orderId });
-      return NextResponse.json({ verified: false, error: 'Unauthorized.' }, { status: 401 });
-    }
+    const { data: { user } } = await supabase.auth.getUser();
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 3. Fetch order (confirming customer ownership)
+    // 3. Fetch order
     const { data: fetchedOrder, error: fetchError } = await (supabaseAdmin as any)
       .from('orders')
       .select('*')
       .eq('order_id', orderId)
-      .eq('user_id', user.id)
       .single();
 
     const order = fetchedOrder as any;
 
     if (fetchError || !order) {
-      logEvent('WARN', 'Invalid Client Payload', { reason: 'Order not found or ownership mismatch', orderId, userId: user.id });
+      logEvent('WARN', 'Invalid Client Payload', { reason: 'Order not found', orderId });
       return NextResponse.json({ verified: false, error: 'Order not found.' }, { status: 404 });
+    }
+
+    // If order belongs to an authenticated user, verify ownership
+    if (order.user_id && (!user || order.user_id !== user.id)) {
+      logEvent('WARN', 'Authorization Failure', { reason: 'Order user ownership mismatch', orderId, orderUserId: order.user_id, sessionUserId: user?.id });
+      return NextResponse.json({ verified: false, error: 'Unauthorized.' }, { status: 401 });
     }
 
     if (order.razorpay_order_id !== razorpay_order_id) {
@@ -168,8 +169,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ verified: false, error: 'Payment details mismatch.' }, { status: 400 });
       }
       if (payment.status !== 'captured' && payment.captured !== true) {
-        logEvent('WARN', 'Payment Not Captured', { orderId, razorpay_payment_id, status: payment.status });
-        return NextResponse.json({ verified: false, error: 'Payment has not been captured yet.' }, { status: 400 });
+        if (payment.status === 'authorized') {
+          try {
+            payment = await rzp.payments.capture(razorpay_payment_id, payment.amount, payment.currency || 'INR');
+          } catch (captureErr: any) {
+            logEvent('ERROR', 'Razorpay Capture Failed', { orderId, razorpay_payment_id, error: captureErr?.message });
+            return NextResponse.json({ verified: false, error: 'Payment authorization could not be captured.' }, { status: 400 });
+          }
+        } else {
+          logEvent('WARN', 'Payment Not Captured', { orderId, razorpay_payment_id, status: payment.status });
+          return NextResponse.json({ verified: false, error: 'Payment has not been captured yet.' }, { status: 400 });
+        }
       }
     } catch (paymentErr: any) {
       logEvent('ERROR', 'Razorpay Failure', { reason: 'Failed to fetch payment details from gateway', error: paymentErr?.message, razorpay_payment_id });

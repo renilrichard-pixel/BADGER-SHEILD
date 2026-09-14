@@ -193,8 +193,7 @@ export default function ProductClient({ product }: { product: Product }) {
       selectedColor,
       image: product.images?.[0] || '',
     });
-    const authed = await requireAuth('/checkout?buy-now=1');
-    if (authed) router.push('/checkout?buy-now=1');
+    router.push('/checkout?buy-now=1');
   };
 
   const toggleWishlist = async () => {

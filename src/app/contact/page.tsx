@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Mail, Phone, Clock, ShieldAlert } from 'lucide-react';
+import { Mail, Phone, Clock, ShieldAlert, MapPin } from 'lucide-react';
 import BackButton from './back-button';
 import ContactForm from './contact-form';
 import { BRAND_POLICIES } from '@/lib/policies';
@@ -85,6 +85,27 @@ export default function ContactPage() {
                 <p className="text-sm font-semibold text-foreground pt-0.5">
                   {BRAND_POLICIES.SUPPORT.STATUS_TEXT}
                 </p>
+              </div>
+            </div>
+
+            {/* D. Registered Office & Return Warehouse */}
+            <div className="p-6 border border-border bg-card flex gap-4 items-start">
+              <div className="p-2.5 rounded-full bg-muted/65 border border-border/50 text-foreground shrink-0">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">REGISTERED OFFICE</h3>
+                  <p className="text-xs text-foreground font-medium pt-1 leading-relaxed">
+                    {BRAND_POLICIES.ADDRESS.REGISTERED_OFFICE}
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-border/40">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">RETURN WAREHOUSE</h3>
+                  <p className="text-xs text-foreground font-medium pt-1 leading-relaxed">
+                    {BRAND_POLICIES.ADDRESS.RETURN_WAREHOUSE}
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -58,7 +58,7 @@ function validateCreatePayload(body: any): string | null {
     return 'Payload must be a JSON object';
   }
   
-  const allowedKeys = ['items', 'addressId', 'paymentMethod'];
+  const allowedKeys = ['items', 'addressId', 'guestAddress', 'paymentMethod'];
   const bodyKeys = Object.keys(body);
   for (const key of bodyKeys) {
     if (!allowedKeys.includes(key)) {
@@ -104,8 +104,22 @@ function validateCreatePayload(body: any): string | null {
     }
   }
 
-  if (typeof body.addressId !== 'string' || body.addressId.trim() === '') {
-    return 'Invalid or missing addressId';
+  const hasAddressId = typeof body.addressId === 'string' && body.addressId.trim() !== '';
+  const hasGuestAddress = typeof body.guestAddress === 'object' && body.guestAddress !== null;
+
+  if (!hasAddressId && !hasGuestAddress) {
+    return 'Either addressId or delivery address details must be provided';
+  }
+
+  if (hasGuestAddress) {
+    const ga = body.guestAddress;
+    if (typeof ga.first_name !== 'string' || !ga.first_name.trim()) return 'Invalid or missing first_name in delivery details';
+    if (typeof ga.phone !== 'string' || ga.phone.trim().length < 8) return 'Please provide a valid phone number';
+    if (typeof ga.address !== 'string' || !ga.address.trim()) return 'Invalid or missing address in delivery details';
+    if (typeof ga.city !== 'string' || !ga.city.trim()) return 'Invalid or missing city in delivery details';
+    if (typeof ga.state !== 'string' || !ga.state.trim()) return 'Invalid or missing state in delivery details';
+    if (typeof ga.pincode !== 'string' || !ga.pincode.trim()) return 'Invalid or missing pincode in delivery details';
+    if (typeof ga.email !== 'string' || !ga.email.includes('@')) return 'Please provide a valid email address';
   }
 
   if (body.paymentMethod !== 'upi' && body.paymentMethod !== 'netbanking') {
@@ -206,32 +220,80 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
-  const { items, addressId, paymentMethod } = requestBody as {
+  const { items, addressId, guestAddress, paymentMethod } = requestBody as {
     items: CheckoutItem[];
-    addressId: string;
+    addressId?: string;
+    guestAddress?: {
+      first_name: string;
+      last_name?: string;
+      email: string;
+      phone: string;
+      address: string;
+      city: string;
+      state: string;
+      pincode: string;
+    };
     paymentMethod: 'upi' | 'netbanking';
   };
 
   try {
-    // 1. Authenticate user
+    // 1. Authenticate user (optional for guest checkout)
     const supabase = await createSupabaseServer();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      logEvent('WARN', 'Authorization Failure', { reason: authError?.message || 'No active user session' });
-      return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
-    }
+    const { data: { user } } = await supabase.auth.getUser();
 
-    // 2. Validate customer address ownership
-    const { data: address, error: addressError } = await supabase
-      .from('user_addresses')
-      .select('*')
-      .eq('id', addressId)
-      .eq('user_id', user.id)
-      .single();
+    // 2. Resolve delivery address
+    let address: {
+      first_name: string;
+      last_name: string;
+      phone: string;
+      address: string;
+      city: string;
+      state: string;
+      pincode: string;
+      email: string;
+    };
 
-    if (addressError || !address) {
-      logEvent('WARN', 'Invalid Client Payload', { reason: 'Address not found or ownership mismatch', addressId, userId: user.id });
-      return NextResponse.json({ error: 'Delivery address invalid or does not belong to your account.' }, { status: 400 });
+    if (addressId) {
+      if (!user) {
+        logEvent('WARN', 'Authorization Failure', { reason: 'User session required for saved address', addressId });
+        return NextResponse.json({ error: 'Please sign in to use your saved address.' }, { status: 401 });
+      }
+
+      const { data: savedAddress, error: addressError } = await supabase
+        .from('user_addresses')
+        .select('*')
+        .eq('id', addressId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (addressError || !savedAddress) {
+        logEvent('WARN', 'Invalid Client Payload', { reason: 'Address not found or ownership mismatch', addressId, userId: user.id });
+        return NextResponse.json({ error: 'Delivery address invalid or does not belong to your account.' }, { status: 400 });
+      }
+
+      address = {
+        first_name: savedAddress.first_name,
+        last_name: savedAddress.last_name || '',
+        phone: savedAddress.phone,
+        address: savedAddress.address,
+        city: savedAddress.city,
+        state: savedAddress.state,
+        pincode: savedAddress.pincode,
+        email: user.email || '',
+      };
+    } else if (guestAddress) {
+      address = {
+        first_name: guestAddress.first_name.trim(),
+        last_name: (guestAddress.last_name || '').trim(),
+        phone: guestAddress.phone.trim(),
+        address: guestAddress.address.trim(),
+        city: guestAddress.city.trim(),
+        state: guestAddress.state.trim(),
+        pincode: guestAddress.pincode.trim(),
+        email: (user?.email || guestAddress.email || '').trim().toLowerCase(),
+      };
+    } else {
+      return NextResponse.json({ error: 'Delivery address details are required.' }, { status: 400 });
     }
 
     const keyId = process.env.RAZORPAY_KEY_ID;
@@ -246,6 +308,8 @@ export async function POST(request: Request) {
     const dbProducts = await writeClient.fetch<Array<{
       _id: string;
       name: string;
+      slug?: string;
+      image?: string;
       price: number;
       salePrice?: number;
       sizes: string[];
@@ -254,7 +318,19 @@ export async function POST(request: Request) {
       stock?: number;
       sizeStock?: SizeStockEntry[];
     }>>(
-      `*[_id in $productIds] { _id, name, price, salePrice, sizes, colors, active, stock, sizeStock[] { size, quantity } }`,
+      `*[_id in $productIds] { 
+        _id, 
+        name, 
+        "slug": slug.current, 
+        "image": coalesce(images[0].asset->url, image.asset->url), 
+        price, 
+        salePrice, 
+        sizes, 
+        colors, 
+        active, 
+        stock, 
+        sizeStock[] { size, quantity } 
+      }`,
       { productIds }
     );
 
@@ -325,6 +401,8 @@ export async function POST(request: Request) {
         cartId: item.cartId || `${item.productId}-${canonicalSize}-${selectedColor}`,
         productId: item.productId,
         name: dbProduct.name,
+        slug: dbProduct.slug || '',
+        image: dbProduct.image || '',
         quantity: item.quantity,
         selectedSize: canonicalSize,
         selectedColor,
@@ -360,30 +438,32 @@ export async function POST(request: Request) {
     const supabaseAdmin = getSupabaseAdmin();
 
     // 4. Implement Order Creation Idempotency
-    const { data: existingOrders, error: fetchOrdersError } = await (supabaseAdmin as any)
-      .from('orders')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'pending');
-
-    if (fetchOrdersError) {
-      logEvent('ERROR', 'Database Failure', { error: fetchOrdersError.message });
-      return NextResponse.json({ error: 'Database verification failed.' }, { status: 500 });
-    }
-
     let matchedOrder: any = null;
-    const ordersList = existingOrders as any[] | null;
-    if (ordersList && ordersList.length > 0) {
-      for (const ord of ordersList) {
-        if (
-          ord.payment_method === paymentMethod &&
-          Math.round(ord.total) === Math.round(serverTotal) &&
-          ord.customer_info?.address === address.address &&
-          ord.customer_info?.phone === address.phone &&
-          itemsAreEquivalent(ord.items, itemsDetail)
-        ) {
-          matchedOrder = ord;
-          break;
+    if (user?.id) {
+      const { data: existingOrders, error: fetchOrdersError } = await (supabaseAdmin as any)
+        .from('orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+
+      if (fetchOrdersError) {
+        logEvent('ERROR', 'Database Failure', { error: fetchOrdersError.message });
+        return NextResponse.json({ error: 'Database verification failed.' }, { status: 500 });
+      }
+
+      const ordersList = existingOrders as any[] | null;
+      if (ordersList && ordersList.length > 0) {
+        for (const ord of ordersList) {
+          if (
+            ord.payment_method === paymentMethod &&
+            Math.round(ord.total) === Math.round(serverTotal) &&
+            ord.customer_info?.address === address.address &&
+            ord.customer_info?.phone === address.phone &&
+            itemsAreEquivalent(ord.items, itemsDetail)
+          ) {
+            matchedOrder = ord;
+            break;
+          }
         }
       }
     }
@@ -421,7 +501,7 @@ export async function POST(request: Request) {
         .from('orders')
         .insert({
           order_id: orderId,
-          user_id: user.id,
+          user_id: user?.id ?? null,
           status: 'pending',
           items: itemsDetail,
           subtotal: serverSubtotal,
@@ -437,7 +517,7 @@ export async function POST(request: Request) {
             city: address.city,
             state: address.state,
             pincode: address.pincode,
-            email: user.email ?? '',
+            email: address.email || user?.email || '',
           },
           razorpay_order_id: null,
           razorpay_payment_id: null,
@@ -460,6 +540,7 @@ export async function POST(request: Request) {
         amount: amountInPaise,
         currency: 'INR',
         receipt: orderId,
+        payment_capture: true,
       });
       logEvent('INFO', 'Razorpay Order Created', { orderId, razorpayOrderId: rzpOrder.id });
     } catch (rzpErr: any) {
