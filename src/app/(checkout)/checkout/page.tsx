@@ -90,9 +90,20 @@ function CheckoutContent() {
   }, []);
 
   const selectedItems = buyNowItem ? [buyNowItem] : items.filter(i => i.selected !== false);
+  const isPrebookOrder = Boolean(searchParams.get('prebook') === '1' || buyNowItem?.isPrebook || selectedItems.some(i => i.isPrebook));
+  
+  const fullOrderValue = selectedItems.reduce((s, i) => s + (i.fullPrice || i.price) * i.quantity, 0);
+  const prebookAdvanceTotal = isPrebookOrder
+    ? selectedItems.reduce((s, i) => {
+        const adv = i.prebookAdvanceAmount || buyNowItem?.prebookAdvanceAmount;
+        return s + (adv ? adv * i.quantity : i.price * i.quantity);
+      }, 0)
+    : 0;
+  const prebookBalanceDue = isPrebookOrder ? Math.max(0, fullOrderValue - prebookAdvanceTotal) : 0;
+
   const subtotal = selectedItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const shipping = BRAND_POLICIES.SHIPPING.FEE;
-  const total = subtotal + shipping;
+  const shipping = isPrebookOrder ? 0 : BRAND_POLICIES.SHIPPING.FEE;
+  const total = isPrebookOrder ? prebookAdvanceTotal : subtotal + shipping;
 
   useEffect(() => {
     if (!isBuyNow) {
@@ -327,7 +338,13 @@ const loadRazorpayScript = () => {
           quantity: i.quantity,
           selectedSize: i.selectedSize,
           selectedColor: i.selectedColor,
+          isPrebook: i.isPrebook ?? isPrebookOrder,
+          prebookAdvanceAmount: i.prebookAdvanceAmount ?? buyNowItem?.prebookAdvanceAmount,
+          fullPrice: i.fullPrice ?? i.price,
         })),
+        isPrebook: isPrebookOrder,
+        advanceAmount: prebookAdvanceTotal,
+        balanceDue: prebookBalanceDue,
         ...(usingSavedAddr && addr ? { addressId: addr.id } : { guestAddress: guestForm }),
         paymentMethod: payMethod,
       }),
@@ -730,7 +747,9 @@ const loadRazorpayScript = () => {
               >
                 {isProcessing
                   ? <><div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" /> Processing…</>
-                  : <><Lock className="w-3.5 h-3.5" /> Pay ₹{total.toLocaleString()}</>
+                  : isPrebookOrder
+                    ? <><Lock className="w-3.5 h-3.5" /> Pay Advance ₹{total.toLocaleString()} (Pre-Book)</>
+                    : <><Lock className="w-3.5 h-3.5" /> Pay ₹{total.toLocaleString()}</>
                 }
               </button>
 
@@ -790,18 +809,41 @@ const loadRazorpayScript = () => {
                 {/* Totals */}
                 <div className="px-5 py-4 border-t border-border/40 space-y-3">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-semibold">₹{subtotal.toLocaleString()}</span>
+                    <span className="text-muted-foreground">{isPrebookOrder ? 'Total Product Value' : 'Subtotal'}</span>
+                    <span className="font-semibold">₹{(isPrebookOrder ? fullOrderValue : subtotal).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span className="font-semibold">{BRAND_POLICIES.SHIPPING.LABEL}</span>
-                  </div>
+
+                  {!isPrebookOrder && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span className="font-semibold">{BRAND_POLICIES.SHIPPING.LABEL}</span>
+                    </div>
+                  )}
+
+                  {isPrebookOrder && (
+                    <>
+                      <div className="flex justify-between text-xs text-amber-500 font-bold">
+                        <span>Pre-Book Advance Payable Now</span>
+                        <span>₹{prebookAdvanceTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Balance Due on Delivery</span>
+                        <span>₹{prebookBalanceDue.toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
+
                   <div className="flex justify-between text-sm font-bold pt-3 border-t border-border/40">
-                    <span>Total</span>
-                    <span className="text-base">₹{total.toLocaleString()}</span>
+                    <span>{isPrebookOrder ? 'Payable Now (Advance)' : 'Total'}</span>
+                    <span className={`text-base ${isPrebookOrder ? 'text-amber-500 font-black' : ''}`}>
+                      ₹{total.toLocaleString()}
+                    </span>
                   </div>
-                  <p className="text-[9px] text-muted-foreground text-right">{BRAND_POLICIES.SHIPPING.TEXT}</p>
+                  <p className="text-[9px] text-muted-foreground text-right">
+                    {isPrebookOrder
+                      ? '★ Balance to be collected upon order fulfillment/delivery'
+                      : BRAND_POLICIES.SHIPPING.TEXT}
+                  </p>
                 </div>
               </div>
             </div>
@@ -813,7 +855,9 @@ const loadRazorpayScript = () => {
       {/* Mobile sticky CTA */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border/60 p-4 flex items-center justify-between z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Total</p>
+          <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">
+            {isPrebookOrder ? 'Advance Payable' : 'Total'}
+          </p>
           <p className="text-xl font-bold tabular-nums">₹{total.toLocaleString()}</p>
         </div>
         <button
@@ -824,7 +868,9 @@ const loadRazorpayScript = () => {
         >
           {isProcessing
             ? <><RotateCcw className="w-3 h-3" /> Reset</>
-            : <><Lock className="w-3 h-3" /> Pay Now</>
+            : isPrebookOrder
+              ? <><Lock className="w-3.5 h-3.5" /> Pay Advance</>
+              : <><Lock className="w-3 h-3" /> Pay Now</>
           }
         </button>
       </div>

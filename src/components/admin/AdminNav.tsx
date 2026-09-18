@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Package, ShoppingBag, Image as ImageIcon, ExternalLink, LogOut } from 'lucide-react';
+import { Package, ShoppingBag, Image as ImageIcon, ExternalLink, LogOut, Clock } from 'lucide-react';
 
 export default function AdminNav() {
   const pathname = usePathname();
@@ -33,6 +33,7 @@ export default function AdminNav() {
 
   const navItems = [
     { href: '/admin', label: 'Orders & Cash', icon: Package },
+    { href: '/admin/prebooks', label: 'Pre-Books', icon: Clock },
     { href: '/admin/products', label: 'Products & Pricing', icon: ShoppingBag },
     { href: '/admin/hero', label: 'Hero Section', icon: ImageIcon },
   ];

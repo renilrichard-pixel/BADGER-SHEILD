@@ -31,6 +31,8 @@ interface ProductData {
   categoryName?: string;
   averageRating?: number;
   reviewCount?: number;
+  isPrebook?: boolean;
+  prebookAdvanceAmount?: number;
 }
 
 export const revalidate = 0;
@@ -78,6 +80,8 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
         categorySlug: custom.categorySlug,
         categoryName: custom.categoryName,
         rating: 5,
+        isPrebook: custom.isPrebook,
+        prebookAdvanceAmount: custom.prebookAdvanceAmount,
       };
     }
   }
@@ -92,6 +96,8 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
         salePrice: o.salePrice !== undefined ? o.salePrice : product.salePrice,
         stock: o.stockQty !== undefined ? o.stockQty : product.stock,
         sizeStock: o.sizeStock !== undefined ? o.sizeStock : product.sizeStock,
+        isPrebook: o.isPrebook !== undefined ? o.isPrebook : product.isPrebook,
+        prebookAdvanceAmount: o.prebookAdvanceAmount !== undefined ? o.prebookAdvanceAmount : product.prebookAdvanceAmount,
       };
     }
   }

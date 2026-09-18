@@ -39,6 +39,8 @@ interface Product {
   sizeStock?: SizeStock[];
   stockQty?: number;
   isCustom?: boolean;
+  isPrebook?: boolean;
+  prebookAdvanceAmount?: number;
 }
 
 const CATEGORIES = [
@@ -66,6 +68,8 @@ export default function AdminProductsPage() {
   const [editPrice, setEditPrice] = useState<number>(0);
   const [editSalePrice, setEditSalePrice] = useState<string>('');
   const [editSizeStock, setEditSizeStock] = useState<Record<string, number>>({});
+  const [editIsPrebook, setEditIsPrebook] = useState<boolean>(false);
+  const [editPrebookAdvance, setEditPrebookAdvance] = useState<string>('');
   const [savingEdit, setSavingEdit] = useState(false);
 
   // Add Product Modal State
@@ -76,6 +80,8 @@ export default function AdminProductsPage() {
   const [addSalePrice, setAddSalePrice] = useState('');
   const [addDescription, setAddDescription] = useState('');
   const [addImageUrl, setAddImageUrl] = useState('');
+  const [addIsPrebook, setAddIsPrebook] = useState<boolean>(false);
+  const [addPrebookAdvance, setAddPrebookAdvance] = useState<string>('');
   const [addSizeStock, setAddSizeStock] = useState<Record<string, number>>({
     XS: 0,
     S: 10,
@@ -116,6 +122,8 @@ export default function AdminProductsPage() {
     setEditingProduct(p);
     setEditPrice(p.price);
     setEditSalePrice(p.salePrice ? String(p.salePrice) : '');
+    setEditIsPrebook(p.isPrebook ?? false);
+    setEditPrebookAdvance(p.prebookAdvanceAmount ? String(p.prebookAdvanceAmount) : '');
 
     // Initialize size stock map
     const stockMap: Record<string, number> = {};
@@ -145,6 +153,8 @@ export default function AdminProductsPage() {
           salePrice: editSalePrice ? Number(editSalePrice) : undefined,
           stockQty: totalStock,
           sizeStock: sizeStockArray,
+          isPrebook: editIsPrebook,
+          prebookAdvanceAmount: editIsPrebook && editPrebookAdvance ? Number(editPrebookAdvance) : undefined,
         }),
       });
 
@@ -221,6 +231,8 @@ export default function AdminProductsPage() {
           imageUrl: addImageUrl || undefined,
           sizes: SIZES,
           sizeStock: sizeStockArray,
+          isPrebook: addIsPrebook,
+          prebookAdvanceAmount: addIsPrebook && addPrebookAdvance ? Number(addPrebookAdvance) : undefined,
         }),
       });
 
@@ -240,6 +252,8 @@ export default function AdminProductsPage() {
       setAddSalePrice('');
       setAddDescription('');
       setAddImageUrl('');
+      setAddIsPrebook(false);
+      setAddPrebookAdvance('');
     } catch (err: any) {
       alert(err?.message || 'Error creating product.');
     } finally {
@@ -368,6 +382,13 @@ export default function AdminProductsPage() {
                           <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
                             ID: {product._id.slice(0, 16)}...
                           </p>
+                          {product.isPrebook && (
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <span className="inline-flex items-center gap-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider">
+                                ★ Pre-Book: {product.prebookAdvanceAmount ? money(product.prebookAdvanceAmount) : 'Active'} Adv.
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -382,6 +403,11 @@ export default function AdminProductsPage() {
                     {/* Price */}
                     <td className="py-4 px-4 align-top">
                       <p className="font-mono font-bold text-white text-sm">{money(product.price)}</p>
+                      {product.isPrebook && product.prebookAdvanceAmount ? (
+                        <p className="text-[10px] text-amber-400 font-mono font-semibold mt-0.5">
+                          Adv: {money(product.prebookAdvanceAmount)}
+                        </p>
+                      ) : null}
                     </td>
 
                     {/* Sale Price */}
@@ -482,6 +508,48 @@ export default function AdminProductsPage() {
                     className="w-full bg-zinc-900 border border-white/15 px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-white"
                   />
                 </div>
+              </div>
+
+              {/* Pre-Book Toggle & Advance Amount */}
+              <div className="p-3.5 bg-zinc-900/90 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                      Enable Pre-Book
+                    </p>
+                    <p className="text-[10px] text-zinc-400">
+                      Allow customers to reserve this item with a partial advance deposit
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editIsPrebook}
+                      onChange={(e) => setEditIsPrebook(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                {editIsPrebook && (
+                  <div className="pt-2.5 border-t border-white/10 space-y-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                      Pre-Book Advance Amount (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editPrebookAdvance}
+                      onChange={(e) => setEditPrebookAdvance(e.target.value)}
+                      placeholder="e.g. 299"
+                      className="w-full bg-black border border-amber-500/40 px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-400"
+                    />
+                    <p className="text-[9px] text-zinc-400">
+                      Customer pays this advance online. Remaining balance is due on delivery.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Stock by Size */}
@@ -612,6 +680,48 @@ export default function AdminProductsPage() {
                     className="w-full bg-zinc-900 border border-white/15 px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-white"
                   />
                 </div>
+              </div>
+
+              {/* Pre-Book Toggle & Advance Amount */}
+              <div className="p-3.5 bg-zinc-900/90 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                      Enable Pre-Book
+                    </p>
+                    <p className="text-[10px] text-zinc-400">
+                      Allow customers to pre-book this product with an advance deposit
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={addIsPrebook}
+                      onChange={(e) => setAddIsPrebook(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                {addIsPrebook && (
+                  <div className="pt-2.5 border-t border-white/10 space-y-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                      Pre-Book Advance Amount (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={addPrebookAdvance}
+                      onChange={(e) => setAddPrebookAdvance(e.target.value)}
+                      placeholder="e.g. 299"
+                      className="w-full bg-black border border-amber-500/40 px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-400"
+                    />
+                    <p className="text-[9px] text-zinc-400">
+                      Customer pays this advance online now. The balance will be collected upon delivery.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

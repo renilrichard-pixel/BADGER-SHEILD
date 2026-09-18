@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getSizeStockQuantity, normalizeSize, type SizeStockEntry } from '@/lib/sizeStock';
 import { BRAND_POLICIES } from '@/lib/policies';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { getProductOverrides, getCustomProducts } from '@/lib/adminProducts';
 import crypto from 'crypto';
 
 const writeClient = createSanityClient({
@@ -23,6 +24,9 @@ interface CheckoutItem {
   quantity: number;
   selectedSize: string;
   selectedColor?: string;
+  isPrebook?: boolean;
+  prebookAdvanceAmount?: number;
+  fullPrice?: number;
 }
 
 const DEFAULT_SELECTED_COLOR = 'Default';
@@ -58,7 +62,7 @@ function validateCreatePayload(body: any): string | null {
     return 'Payload must be a JSON object';
   }
   
-  const allowedKeys = ['items', 'addressId', 'guestAddress', 'paymentMethod'];
+  const allowedKeys = ['items', 'addressId', 'guestAddress', 'paymentMethod', 'isPrebook', 'advanceAmount', 'balanceDue'];
   const bodyKeys = Object.keys(body);
   for (const key of bodyKeys) {
     if (!allowedKeys.includes(key)) {
@@ -76,7 +80,7 @@ function validateCreatePayload(body: any): string | null {
       return `Item at index ${i} must be a JSON object`;
     }
     
-    const allowedItemKeys = ['cartId', 'productId', 'name', 'quantity', 'selectedSize', 'selectedColor'];
+    const allowedItemKeys = ['cartId', 'productId', 'name', 'quantity', 'selectedSize', 'selectedColor', 'isPrebook', 'prebookAdvanceAmount', 'fullPrice'];
     const itemKeys = Object.keys(item);
     for (const key of itemKeys) {
       if (!allowedItemKeys.includes(key)) {
@@ -220,7 +224,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
-  const { items, addressId, guestAddress, paymentMethod } = requestBody as {
+  const { items, addressId, guestAddress, paymentMethod, isPrebook, advanceAmount, balanceDue } = requestBody as {
     items: CheckoutItem[];
     addressId?: string;
     guestAddress?: {
@@ -234,6 +238,9 @@ export async function POST(request: Request) {
       pincode: string;
     };
     paymentMethod: 'upi' | 'netbanking';
+    isPrebook?: boolean;
+    advanceAmount?: number;
+    balanceDue?: number;
   };
 
   try {
@@ -305,34 +312,66 @@ export async function POST(request: Request) {
 
     // 3. Fetch products and perform Stage 1 stock, active status, size, and color checks
     const productIds = items.map((item) => item.productId);
-    const dbProducts = await writeClient.fetch<Array<{
-      _id: string;
-      name: string;
-      slug?: string;
-      image?: string;
-      price: number;
-      salePrice?: number;
-      sizes: string[];
-      colors?: Array<{ name: string }>;
-      active?: boolean;
-      stock?: number;
-      sizeStock?: SizeStockEntry[];
-    }>>(
-      `*[_id in $productIds] { 
-        _id, 
-        name, 
-        "slug": slug.current, 
-        "image": coalesce(images[0].asset->url, image.asset->url), 
-        price, 
-        salePrice, 
-        sizes, 
-        colors, 
-        active, 
-        stock, 
-        sizeStock[] { size, quantity } 
-      }`,
-      { productIds }
-    );
+    let dbProducts: Array<any> = [];
+    try {
+      dbProducts = await writeClient.fetch<Array<any>>(
+        `*[_id in $productIds] { 
+          _id, 
+          name, 
+          "slug": slug.current, 
+          "image": coalesce(images[0].asset->url, image.asset->url), 
+          price, 
+          salePrice, 
+          sizes, 
+          colors, 
+          active, 
+          stock, 
+          sizeStock[] { size, quantity } 
+        }`,
+        { productIds }
+      );
+    } catch {
+      dbProducts = [];
+    }
+
+    const overrides = getProductOverrides();
+    const customProducts = getCustomProducts();
+
+    // Include custom products
+    for (const custom of customProducts) {
+      if (productIds.includes(custom._id) && !dbProducts.some((p) => p._id === custom._id)) {
+        dbProducts.push({
+          _id: custom._id,
+          name: custom.name,
+          slug: custom.slug,
+          image: custom.image || (custom.images && custom.images[0]) || '',
+          price: custom.price,
+          salePrice: custom.salePrice,
+          sizes: custom.sizes || ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+          colors: [{ name: 'Default' }],
+          active: true,
+          stock: custom.stockQty,
+          sizeStock: custom.sizeStock,
+          isPrebook: custom.isPrebook,
+          prebookAdvanceAmount: custom.prebookAdvanceAmount,
+        });
+      }
+    }
+
+    // Apply overrides to products
+    dbProducts = dbProducts.map((p) => {
+      const o = overrides[p._id];
+      if (!o) return p;
+      return {
+        ...p,
+        price: o.price !== undefined ? o.price : p.price,
+        salePrice: o.salePrice !== undefined ? o.salePrice : p.salePrice,
+        stock: o.stockQty !== undefined ? o.stockQty : p.stock,
+        sizeStock: o.sizeStock !== undefined ? o.sizeStock : p.sizeStock,
+        isPrebook: o.isPrebook !== undefined ? o.isPrebook : p.isPrebook,
+        prebookAdvanceAmount: o.prebookAdvanceAmount !== undefined ? o.prebookAdvanceAmount : p.prebookAdvanceAmount,
+      };
+    });
 
     let serverSubtotal = 0;
     const itemsDetail: any[] = [];
@@ -357,19 +396,19 @@ export async function POST(request: Request) {
       }
 
       const selectedSize = normalizeSize(item.selectedSize);
-      const canonicalSize = dbProduct.sizes?.find((size) => normalizeSize(size) === selectedSize);
+      const canonicalSize = dbProduct.sizes?.find((size: string) => normalizeSize(size) === selectedSize);
       if (!canonicalSize) {
         logEvent('WARN', 'Invalid Client Payload', { reason: 'Size not available', productId: item.productId, size: item.selectedSize });
         return NextResponse.json({ error: `Size "${item.selectedSize}" is not available for product "${dbProduct.name}".` }, { status: 400 });
       }
 
       const availableColors = (dbProduct.colors ?? [])
-        .map((color) => color.name)
-        .filter((name): name is string => typeof name === 'string' && name.trim() !== '');
+        .map((color: any) => color.name)
+        .filter((name: any): name is string => typeof name === 'string' && name.trim() !== '');
       const { selectedColor, wasInferred: colorWasInferred } = resolveSelectedColor(item.selectedColor, availableColors);
 
       if (availableColors.length > 0) {
-        const colorExists = availableColors.some((color) => color === selectedColor);
+        const colorExists = availableColors.some((color: string) => color === selectedColor);
         if (!colorExists) {
           logEvent('WARN', 'Invalid Client Payload', { reason: 'Color not available', productId: item.productId, color: selectedColor });
           return NextResponse.json({ error: `Color "${selectedColor}" is not available for product "${dbProduct.name}".` }, { status: 400 });
@@ -394,6 +433,8 @@ export async function POST(request: Request) {
         quantity: (existingRequest?.quantity ?? 0) + item.quantity,
       });
 
+      const isItemPrebook = Boolean(item.isPrebook || dbProduct.isPrebook);
+      const itemAdvance = item.prebookAdvanceAmount || dbProduct.prebookAdvanceAmount;
       const activePrice = (dbProduct.salePrice !== undefined && dbProduct.salePrice !== null) ? dbProduct.salePrice : dbProduct.price;
       serverSubtotal += activePrice * item.quantity;
 
@@ -407,6 +448,9 @@ export async function POST(request: Request) {
         selectedSize: canonicalSize,
         selectedColor,
         price: activePrice,
+        isPrebook: isItemPrebook,
+        prebookAdvanceAmount: itemAdvance,
+        fullPrice: activePrice,
       });
     }
 
@@ -428,7 +472,20 @@ export async function POST(request: Request) {
 
     const serverShipping = BRAND_POLICIES.SHIPPING.FEE;
     const serverTotal = serverSubtotal + serverShipping;
-    const amountInPaise = Math.round(serverTotal * 100);
+
+    // Determine if this is a pre-book transaction
+    const isOrderPrebook = Boolean(isPrebook || itemsDetail.some((i) => i.isPrebook && i.prebookAdvanceAmount));
+    const advancePayableTotal = isOrderPrebook
+      ? itemsDetail.reduce(
+          (sum, i) =>
+            sum + (i.isPrebook && i.prebookAdvanceAmount ? i.prebookAdvanceAmount * i.quantity : i.price * i.quantity),
+          0
+        )
+      : 0;
+    const balanceDueTotal = isOrderPrebook ? Math.max(0, serverTotal - advancePayableTotal) : 0;
+
+    const chargedAmount = isOrderPrebook ? advancePayableTotal : serverTotal;
+    const amountInPaise = Math.round(chargedAmount * 100);
 
     if (amountInPaise < 100) {
       logEvent('WARN', 'Invalid Client Payload', { reason: 'Order amount below Razorpay minimum', amountInPaise });
@@ -507,7 +564,7 @@ export async function POST(request: Request) {
           subtotal: serverSubtotal,
           shipping_fee: serverShipping,
           tax: 0,
-          total: serverTotal,
+          total: chargedAmount,
           payment_method: paymentMethod,
           customer_info: {
             first_name: address.first_name,
@@ -518,6 +575,10 @@ export async function POST(request: Request) {
             state: address.state,
             pincode: address.pincode,
             email: address.email || user?.email || '',
+            is_prebook: isOrderPrebook,
+            advance_paid: isOrderPrebook ? advancePayableTotal : undefined,
+            balance_due: isOrderPrebook ? balanceDueTotal : undefined,
+            full_order_value: isOrderPrebook ? serverTotal : undefined,
           },
           razorpay_order_id: null,
           razorpay_payment_id: null,

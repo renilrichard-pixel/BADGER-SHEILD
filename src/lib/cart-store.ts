@@ -11,6 +11,9 @@ export interface CartItem {
   selectedColor: string;
   image: string;
   selected?: boolean;
+  isPrebook?: boolean;
+  prebookAdvanceAmount?: number;
+  fullPrice?: number;
 }
 
 let listeners: (() => void)[] = [];

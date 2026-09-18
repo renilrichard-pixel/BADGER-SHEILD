@@ -23,6 +23,8 @@ export interface AdminProduct {
   newArrival?: boolean;
   bestSeller?: boolean;
   isCustom?: boolean;
+  isPrebook?: boolean;
+  prebookAdvanceAmount?: number;
 }
 
 const DATA_DIR = path.join(process.cwd(), 'src', 'data');
@@ -133,6 +135,8 @@ export async function updateProductPriceAndStock(
     name?: string;
     categorySlug?: string;
     categoryName?: string;
+    isPrebook?: boolean;
+    prebookAdvanceAmount?: number;
   }
 ): Promise<AdminProduct | null> {
   const overrides = getProductOverrides();
@@ -193,6 +197,8 @@ export async function createAdminProduct(data: {
   imageUrl?: string;
   sizes: string[];
   sizeStock: SizeStockEntry[];
+  isPrebook?: boolean;
+  prebookAdvanceAmount?: number;
 }): Promise<AdminProduct> {
   const cleanSlug = data.name
     .toLowerCase()
@@ -220,6 +226,8 @@ export async function createAdminProduct(data: {
     newArrival: true,
     bestSeller: false,
     isCustom: true,
+    isPrebook: data.isPrebook ?? false,
+    prebookAdvanceAmount: data.prebookAdvanceAmount ? Number(data.prebookAdvanceAmount) : undefined,
   };
 
   const customProducts = getCustomProducts();

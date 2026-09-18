@@ -32,7 +32,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { productId, price, salePrice, stockQty, sizeStock, name } = body;
+    const { productId, price, salePrice, stockQty, sizeStock, name, isPrebook, prebookAdvanceAmount } = body;
 
     if (!productId) {
       return NextResponse.json({ success: false, error: 'productId is required.' }, { status: 400 });
@@ -44,6 +44,8 @@ export async function PATCH(request: NextRequest) {
       stockQty: stockQty !== undefined ? Number(stockQty) : undefined,
       sizeStock,
       name,
+      isPrebook: isPrebook !== undefined ? Boolean(isPrebook) : undefined,
+      prebookAdvanceAmount: prebookAdvanceAmount !== undefined ? (prebookAdvanceAmount ? Number(prebookAdvanceAmount) : undefined) : undefined,
     });
 
     return NextResponse.json({ success: true, product: updated });
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, categorySlug, categoryName, price, salePrice, description, imageUrl, sizes, sizeStock } = body;
+    const { name, categorySlug, categoryName, price, salePrice, description, imageUrl, sizes, sizeStock, isPrebook, prebookAdvanceAmount } = body;
 
     if (!name || !price) {
       return NextResponse.json(
@@ -82,6 +84,8 @@ export async function POST(request: NextRequest) {
       imageUrl,
       sizes: sizes || ['S', 'M', 'L', 'XL'],
       sizeStock: sizeStock || [],
+      isPrebook: isPrebook !== undefined ? Boolean(isPrebook) : false,
+      prebookAdvanceAmount: prebookAdvanceAmount ? Number(prebookAdvanceAmount) : undefined,
     });
 
     return NextResponse.json({ success: true, product: newProduct });

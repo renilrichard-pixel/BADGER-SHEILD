@@ -64,6 +64,8 @@ interface Product {
   images?: string[];
   averageRating?: number;
   reviewCount?: number;
+  isPrebook?: boolean;
+  prebookAdvanceAmount?: number;
 }
 
 const TRUST_BADGES = [
@@ -194,6 +196,34 @@ export default function ProductClient({ product }: { product: Product }) {
       image: product.images?.[0] || '',
     });
     router.push('/checkout?buy-now=1');
+  };
+
+  const handlePrebook = async () => {
+    if (!selectedSize && product.sizes && product.sizes.length > 0) {
+      setSizeError(true);
+      toast.error('Please select a size');
+      return;
+    }
+    if (stock <= 0) {
+      setSizeError(true);
+      toast.error(selectedSize ? `Size ${selectedSize} is out of stock` : 'Out of stock');
+      return;
+    }
+
+    saveBuyNowItem({
+      productId: product._id || 'unknown',
+      name: product.name || 'Product',
+      slug: product.slug?.current || 'product',
+      price: displayPrice,
+      quantity,
+      selectedSize,
+      selectedColor,
+      image: product.images?.[0] || '',
+      isPrebook: true,
+      prebookAdvanceAmount: product.prebookAdvanceAmount,
+      fullPrice: displayPrice,
+    });
+    router.push('/checkout?buy-now=1&prebook=1');
   };
 
   const toggleWishlist = async () => {
@@ -380,6 +410,22 @@ export default function ProductClient({ product }: { product: Product }) {
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">Inclusive of all taxes</p>
+
+              {/* Pre-Book Notice */}
+              {product.isPrebook && product.prebookAdvanceAmount && (
+                <div className="mt-3.5 p-3.5 bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-black px-2 py-0.5">
+                        Pre-Book Available
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-200 mt-1">
+                      Reserve yours with an advance deposit of <strong>₹{product.prebookAdvanceAmount.toLocaleString()}</strong>. The balance is payable upon delivery.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Size Selection — from Sanity */}
@@ -521,34 +567,50 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             {/* CTA */}
-            <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
-              <Button
-                className="rounded-none border border-foreground bg-background text-foreground uppercase tracking-widest h-12 text-xs font-bold hover:bg-muted"
-                size="lg"
-                onClick={handleAddToCart}
-                disabled={isOutOfStock || isAdded}
-              >
-                {isAdded ? <Check className="w-4 h-4 mr-2" /> : <ShoppingBag className="w-4 h-4 mr-2" />}
-                {isAdded ? 'Added' : isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
-              </Button>
-              <Button
-                className="rounded-none uppercase tracking-widest h-12 text-xs font-bold"
-                size="lg"
-                onClick={handleBuyNow}
-                disabled={isOutOfStock}
-              >
-                Buy Now
-              </Button>
-              <button
-                onClick={toggleWishlist}
-                className={`h-12 w-12 border flex items-center justify-center transition-all ${isWishlisted
-                    ? 'border-foreground bg-foreground text-background'
-                    : 'border-border hover:border-foreground'
-                  }`}
-                aria-label="Add to wishlist"
-              >
-                <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
-              </button>
+            <div className="space-y-3">
+              <div className="grid grid-cols-[1fr_1fr_auto] gap-3">
+                <Button
+                  className="rounded-none border border-foreground bg-background text-foreground uppercase tracking-widest h-12 text-xs font-bold hover:bg-muted"
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock || isAdded}
+                >
+                  {isAdded ? <Check className="w-4 h-4 mr-2" /> : <ShoppingBag className="w-4 h-4 mr-2" />}
+                  {isAdded ? 'Added' : isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
+                </Button>
+                <Button
+                  className="rounded-none uppercase tracking-widest h-12 text-xs font-bold"
+                  size="lg"
+                  onClick={handleBuyNow}
+                  disabled={isOutOfStock}
+                >
+                  Buy Now
+                </Button>
+                <button
+                  onClick={toggleWishlist}
+                  className={`h-12 w-12 border flex items-center justify-center transition-all ${isWishlisted
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border hover:border-foreground'
+                    }`}
+                  aria-label="Add to wishlist"
+                >
+                  <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                </button>
+              </div>
+
+              {product.isPrebook && product.prebookAdvanceAmount && (
+                <Button
+                  className="w-full rounded-none uppercase tracking-widest h-12 text-xs font-black bg-amber-500 hover:bg-amber-400 text-black border border-amber-400 shadow-sm transition-all flex items-center justify-center gap-2.5"
+                  size="lg"
+                  onClick={handlePrebook}
+                  disabled={isOutOfStock}
+                >
+                  <span>PRE-BOOK ITEM</span>
+                  <span className="font-mono text-zinc-950 font-black bg-amber-300 px-2 py-0.5 text-[11px] rounded-sm">
+                    Pay ₹{product.prebookAdvanceAmount.toLocaleString()} Advance Now
+                  </span>
+                </Button>
+              )}
             </div>
 
             {/* Accordion */}
