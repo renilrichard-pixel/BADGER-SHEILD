@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { LayoutWrapper } from "@/components/layout-wrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,11 +35,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
-          <main className="flex-1 w-full">
+          <LayoutWrapper
+            navbar={<Navbar />}
+            footer={<Footer />}
+          >
             {children}
-          </main>
-          <Footer />
+          </LayoutWrapper>
           <Toaster />
         </ThemeProvider>
       </body>
