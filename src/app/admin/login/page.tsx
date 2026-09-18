@@ -106,12 +106,6 @@ export default function AdminLoginPage() {
             {!loading && <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
-
-        <div className="mt-8 pt-6 border-t border-white/10 text-center">
-          <p className="text-[10px] text-zinc-600 uppercase tracking-widest">
-            Default system password: <span className="font-mono text-zinc-400">badger2026admin</span>
-          </p>
-        </div>
       </div>
     </div>
   );
