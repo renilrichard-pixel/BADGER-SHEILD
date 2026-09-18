@@ -8,6 +8,7 @@ import type { SanityImageSource } from '@sanity/image-url';
 import { getCachedProductReviewAggregate } from '@/lib/reviews';
 import { RatingsProvider } from '@/context/RatingsContext';
 import type { SizeStockEntry } from '@/lib/sizeStock';
+import { getProductOverrides, getCustomProducts } from '@/lib/adminProducts';
 
 interface ProductData {
   _id: string;
@@ -36,7 +37,7 @@ export const revalidate = 0;
 
 // React cache wrapper to deduplicate calls to getProduct during render lifecycle
 const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
-  return await client.fetch<ProductData | null>(`
+  let product = await client.fetch<ProductData | null>(`
     *[_type == "product" && slug.current == $slug][0] {
       _id,
       name,
@@ -58,6 +59,44 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
       "categoryName": category->name
     }
   `, { slug });
+
+  if (!product) {
+    const custom = getCustomProducts().find((c) => c.slug === slug);
+    if (custom) {
+      product = {
+        _id: custom._id,
+        name: custom.name,
+        slug: { current: custom.slug },
+        description: custom.description,
+        price: custom.price,
+        salePrice: custom.salePrice,
+        stock: custom.stockQty,
+        sizeStock: custom.sizeStock,
+        sizes: custom.sizes,
+        image: custom.image,
+        images: custom.images,
+        categorySlug: custom.categorySlug,
+        categoryName: custom.categoryName,
+        rating: 5,
+      };
+    }
+  }
+
+  if (product) {
+    const overrides = getProductOverrides();
+    const o = overrides[product._id];
+    if (o) {
+      product = {
+        ...product,
+        price: o.price !== undefined ? o.price : product.price,
+        salePrice: o.salePrice !== undefined ? o.salePrice : product.salePrice,
+        stock: o.stockQty !== undefined ? o.stockQty : product.stock,
+        sizeStock: o.sizeStock !== undefined ? o.sizeStock : product.sizeStock,
+      };
+    }
+  }
+
+  return product;
 });
 
 // Strips HTML, markdown, normalize spaces, and truncates to 150-160 characters

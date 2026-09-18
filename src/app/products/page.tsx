@@ -6,6 +6,8 @@ import { ProductCard } from '@/components/product-card';
 import type { SanityImageSource } from '@sanity/image-url';
 import { notFound } from 'next/navigation';
 import type { SizeStockEntry } from '@/lib/sizeStock';
+import { getProductOverrides, getCustomProducts } from '@/lib/adminProducts';
+
 export const revalidate = 0;
 
 type SanityProduct = {
@@ -79,10 +81,50 @@ export default async function ProductsPage({
     ${productFields}
   }`;
 
-  const [products, aggregates] = await Promise.all([
+  const [rawProducts, aggregates] = await Promise.all([
     client.fetch<SanityProduct[]>(productsQuery, queryParams, { next: { revalidate: 0 } }),
     import('@/lib/reviews').then(m => m.getCachedReviewAggregates())
   ]);
+
+  const overrides = getProductOverrides();
+  const customList = getCustomProducts();
+
+  const merged = (rawProducts || []).map((p) => {
+    const o = overrides[p._id];
+    if (!o) return p;
+    return {
+      ...p,
+      price: o.price !== undefined ? o.price : p.price,
+      salePrice: o.salePrice !== undefined ? o.salePrice : p.salePrice,
+      stockQty: o.stockQty !== undefined ? o.stockQty : p.stockQty,
+      sizeStock: o.sizeStock !== undefined ? o.sizeStock : p.sizeStock,
+    };
+  });
+
+  const matchingCustom = customList
+    .filter((c) => {
+      if (category && c.categorySlug !== category) return false;
+      if (q && !c.name.toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    })
+    .map((c) => ({
+      _id: c._id,
+      name: c.name,
+      slug: { current: c.slug },
+      price: c.price,
+      salePrice: c.salePrice,
+      image: c.image,
+      images: c.images,
+      rating: 5,
+      sizes: c.sizes,
+      sizeStock: c.sizeStock,
+      stockQty: c.stockQty,
+      categorySlug: c.categorySlug,
+      categoryName: c.categoryName,
+      newArrival: true,
+    }));
+
+  const products: SanityProduct[] = [...matchingCustom, ...merged];
 
   const renderProductCard = (product: SanityProduct) => {
     const agg = aggregates[product._id];

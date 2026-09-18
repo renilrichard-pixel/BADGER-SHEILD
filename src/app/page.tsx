@@ -9,6 +9,8 @@ import type { SanityImageSource } from '@sanity/image-url';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import type { SizeStockEntry } from '@/lib/sizeStock';
+import { getHeroSettings } from '@/lib/heroSettings';
+import { getProductOverrides, getCustomProducts } from '@/lib/adminProducts';
 
 export const revalidate = 0;
 
@@ -118,7 +120,37 @@ async function getFeaturedProducts(): Promise<HomeProduct[]> {
       }
     `, {}, { next: { revalidate: 0 } });
 
-    return data || [];
+    const overrides = getProductOverrides();
+    const custom = getCustomProducts();
+
+    const merged = (data || []).map((p) => {
+      const o = overrides[p._id];
+      if (!o) return p;
+      return {
+        ...p,
+        price: o.price !== undefined ? o.price : p.price,
+        salePrice: o.salePrice !== undefined ? o.salePrice : p.salePrice,
+        stockQty: o.stockQty !== undefined ? o.stockQty : p.stockQty,
+        sizeStock: o.sizeStock !== undefined ? o.sizeStock : p.sizeStock,
+      };
+    });
+
+    const customMapped: HomeProduct[] = custom.map((c) => ({
+      _id: c._id,
+      name: c.name,
+      slug: { current: c.slug },
+      price: c.price,
+      salePrice: c.salePrice,
+      image: c.image,
+      images: c.images,
+      categoryName: c.categoryName,
+      newArrival: true,
+      sizes: c.sizes,
+      sizeStock: c.sizeStock,
+      stockQty: c.stockQty,
+    }));
+
+    return [...customMapped, ...merged];
   } catch (error) {
     console.error("Failed to fetch featured products on server:", error);
     return [];
@@ -191,7 +223,9 @@ function ProductGridSkeleton() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const hero = await getHeroSettings();
+
   return (
     <main className="min-h-screen bg-background text-foreground" id="main-content">
       <script
@@ -202,14 +236,14 @@ export default function Home() {
       {/* ── Hero Section with Responsive Banner Image ── */}
       <section className="relative min-h-[60vh] flex items-center overflow-hidden" aria-label="Hero Section">
         <Image
-          src="/assets/images/hero-banner.png"
-          alt="BADGER SHEILD premium black graphic t-shirt"
+          src={hero.image || "/assets/images/hero-banner.png"}
+          alt="BADGER SHEILD luxury menswear hero banner"
           fill
           priority
           sizes="100vw"
           className="absolute inset-0 z-0 object-cover object-[64%_top] sm:object-top"
         />
-        <div className="absolute inset-0 z-[1] bg-black/15 sm:bg-transparent" aria-hidden="true" />
+        <div className="absolute inset-0 z-[1] bg-black/25 sm:bg-black/15" aria-hidden="true" />
 
         {/* Hero Content */}
         <div className="relative z-10 container mx-auto max-w-7xl px-4 sm:px-6 py-14 md:py-20 w-full">
@@ -217,13 +251,11 @@ export default function Home() {
 
             {/* Headline */}
             <div className="space-y-4">
-              <h1 className="text-4xl font-black uppercase leading-[0.93] tracking-tight text-white sm:text-5xl lg:text-6xl">
-                Modern<br />T-shirts<br />
-                <span className="italic font-light text-white/80">made for</span><br />
-                Everyday Style.
+              <h1 className="text-4xl font-black uppercase leading-[0.93] tracking-tight text-white sm:text-5xl lg:text-6xl whitespace-pre-line">
+                {hero.headline}
               </h1>
-              <p className="max-w-md text-sm leading-7 text-white/65 sm:text-base">
-                Shop clean fits, heavyweight cotton, and sharp everyday pieces — built for a refined wardrobe.
+              <p className="max-w-md text-sm leading-7 text-white/75 sm:text-base">
+                {hero.subtitle}
               </p>
             </div>
 
@@ -231,19 +263,21 @@ export default function Home() {
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button
                 className="h-12 rounded-none bg-white px-8 text-[11px] font-black uppercase tracking-[0.2em] text-black hover:bg-white/90 transition-all"
-                render={<Link href="/products" />}
+                render={<Link href={hero.primaryCtaLink || "/products"} />}
                 nativeButton={false}
               >
-                Shop Collection <ArrowRight className="ml-2 h-4 w-4" />
+                {hero.primaryCtaText || "Shop Collection"} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                className="h-12 rounded-none border-white/50 bg-transparent px-8 text-[11px] font-black uppercase tracking-[0.2em] text-white hover:bg-white hover:text-black transition-all backdrop-blur-sm"
-                render={<Link href="#new-arrivals" />}
-                nativeButton={false}
-              >
-                New Arrivals
-              </Button>
+              {hero.secondaryCtaText && (
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-none border-white/50 bg-transparent px-8 text-[11px] font-black uppercase tracking-[0.2em] text-white hover:bg-white hover:text-black transition-all backdrop-blur-sm"
+                  render={<Link href={hero.secondaryCtaLink || "#new-arrivals"} />}
+                  nativeButton={false}
+                >
+                  {hero.secondaryCtaText}
+                </Button>
+              )}
             </div>
 
             {/* Trust badges */}
