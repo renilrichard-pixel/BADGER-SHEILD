@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -13,8 +14,8 @@ export default function AdminLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password.trim()) {
-      setError('Please enter the admin password.');
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both your admin email and password.');
       return;
     }
 
@@ -25,13 +26,16 @@ export default function AdminLoginPage() {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error || 'Invalid admin password.');
+        setError(data.error || 'Invalid admin email or password.');
         setLoading(false);
         return;
       }
@@ -61,7 +65,7 @@ export default function AdminLoginPage() {
             Badger Sheild Admin
           </h1>
           <p className="text-xs text-zinc-500 mt-2">
-            Enter your admin security password to access store management.
+            Sign in with your Supabase admin credentials to access store management.
           </p>
         </div>
 
@@ -72,10 +76,30 @@ export default function AdminLoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email */}
+          <div className="space-y-1.5">
             <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
-              Admin Password
+              Admin Email
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
+                required
+                autoFocus
+                className="w-full bg-zinc-900 border border-white/15 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white transition-colors pl-10"
+              />
+              <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+              Password
             </label>
             <div className="relative">
               <input
@@ -84,9 +108,9 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password..."
                 required
-                autoFocus
-                className="w-full bg-zinc-900 border border-white/15 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white transition-colors pr-10"
+                className="w-full bg-zinc-900 border border-white/15 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-white transition-colors pl-10 pr-10"
               />
+              <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -100,9 +124,9 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black py-3.5 text-xs font-black uppercase tracking-[0.25em] hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-white text-black py-3.5 text-xs font-black uppercase tracking-[0.25em] hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
           >
-            {loading ? 'Authenticating…' : 'Access Dashboard'}
+            {loading ? 'Authenticating with Supabase…' : 'Access Dashboard'}
             {!loading && <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
