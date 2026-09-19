@@ -63,7 +63,8 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
   `, { slug });
 
   if (!product) {
-    const custom = getCustomProducts().find((c) => c.slug === slug);
+    const customList = await getCustomProducts();
+    const custom = customList.find((c) => c.slug === slug);
     if (custom) {
       product = {
         _id: custom._id,
@@ -87,7 +88,7 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
   }
 
   if (product) {
-    const overrides = getProductOverrides();
+    const overrides = await getProductOverrides();
     const o = overrides[product._id];
     if (o) {
       product = {

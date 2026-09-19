@@ -86,8 +86,10 @@ export default async function ProductsPage({
     import('@/lib/reviews').then(m => m.getCachedReviewAggregates())
   ]);
 
-  const overrides = getProductOverrides();
-  const customList = getCustomProducts();
+  const [overrides, customList] = await Promise.all([
+    getProductOverrides(),
+    getCustomProducts(),
+  ]);
 
   const merged = (rawProducts || []).map((p) => {
     const o = overrides[p._id];

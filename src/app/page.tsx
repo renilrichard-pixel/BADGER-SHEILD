@@ -120,8 +120,10 @@ async function getFeaturedProducts(): Promise<HomeProduct[]> {
       }
     `, {}, { next: { revalidate: 0 } });
 
-    const overrides = getProductOverrides();
-    const custom = getCustomProducts();
+    const [overrides, custom] = await Promise.all([
+      getProductOverrides(),
+      getCustomProducts(),
+    ]);
 
     const merged = (data || []).map((p) => {
       const o = overrides[p._id];

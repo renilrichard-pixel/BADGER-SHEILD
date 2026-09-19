@@ -27,46 +27,64 @@ export interface AdminProduct {
   prebookAdvanceAmount?: number;
 }
 
+import { readCloudJson, writeCloudJson } from './cloudStore';
+
 const DATA_DIR = path.join(process.cwd(), 'src', 'data');
 const OVERRIDES_FILE = path.join(DATA_DIR, 'product-overrides.json');
 const CUSTOM_FILE = path.join(DATA_DIR, 'custom-products.json');
 
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
+export async function getProductOverrides(): Promise<Record<string, Partial<AdminProduct>>> {
+  try {
+    const cloud = await readCloudJson<Record<string, Partial<AdminProduct>>>('product-overrides.json', {});
+    if (cloud && Object.keys(cloud).length > 0) {
+      return cloud;
+    }
+  } catch {}
 
-export function getProductOverrides(): Record<string, Partial<AdminProduct>> {
   try {
     if (fs.existsSync(OVERRIDES_FILE)) {
       return JSON.parse(fs.readFileSync(OVERRIDES_FILE, 'utf-8'));
     }
-  } catch (err) {
-    console.error('Error reading product overrides:', err);
-  }
+  } catch {}
+
   return {};
 }
 
-export function saveProductOverrides(overrides: Record<string, Partial<AdminProduct>>) {
-  ensureDataDir();
-  fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(overrides, null, 2), 'utf-8');
+export async function saveProductOverrides(overrides: Record<string, Partial<AdminProduct>>): Promise<void> {
+  await writeCloudJson('product-overrides.json', overrides);
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(overrides, null, 2), 'utf-8');
+  } catch {}
 }
 
-export function getCustomProducts(): AdminProduct[] {
+export async function getCustomProducts(): Promise<AdminProduct[]> {
+  try {
+    const cloud = await readCloudJson<AdminProduct[]>('custom-products.json', []);
+    if (cloud && Array.isArray(cloud) && cloud.length > 0) {
+      return cloud;
+    }
+  } catch {}
+
   try {
     if (fs.existsSync(CUSTOM_FILE)) {
       return JSON.parse(fs.readFileSync(CUSTOM_FILE, 'utf-8'));
     }
-  } catch (err) {
-    console.error('Error reading custom products:', err);
-  }
+  } catch {}
+
   return [];
 }
 
-export function saveCustomProducts(products: AdminProduct[]) {
-  ensureDataDir();
-  fs.writeFileSync(CUSTOM_FILE, JSON.stringify(products, null, 2), 'utf-8');
+export async function saveCustomProducts(products: AdminProduct[]): Promise<void> {
+  await writeCloudJson('custom-products.json', products);
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(CUSTOM_FILE, JSON.stringify(products, null, 2), 'utf-8');
+  } catch {}
 }
 
 export async function getAllAdminProducts(): Promise<AdminProduct[]> {
@@ -105,8 +123,10 @@ export async function getAllAdminProducts(): Promise<AdminProduct[]> {
     console.error('Failed to fetch products from Sanity for admin:', err);
   }
 
-  const overrides = getProductOverrides();
-  const customProducts = getCustomProducts();
+  const [overrides, customProducts] = await Promise.all([
+    getProductOverrides(),
+    getCustomProducts(),
+  ]);
 
   // Apply overrides to Sanity products
   const mergedSanity = sanityProducts.map((p) => {
@@ -139,24 +159,24 @@ export async function updateProductPriceAndStock(
     prebookAdvanceAmount?: number;
   }
 ): Promise<AdminProduct | null> {
-  const overrides = getProductOverrides();
+  const overrides = await getProductOverrides();
   const currentOverride = overrides[productId] || {};
 
   overrides[productId] = {
     ...currentOverride,
     ...updates,
   };
-  saveProductOverrides(overrides);
+  await saveProductOverrides(overrides);
 
   // If this product is in custom products, also update in custom-products.json
-  const customProducts = getCustomProducts();
+  const customProducts = await getCustomProducts();
   const customIdx = customProducts.findIndex((p) => p._id === productId);
   if (customIdx >= 0) {
     customProducts[customIdx] = {
       ...customProducts[customIdx],
       ...updates,
     };
-    saveCustomProducts(customProducts);
+    await saveCustomProducts(customProducts);
   }
 
   // Attempt Sanity update non-blockingly if token is configured
@@ -230,9 +250,9 @@ export async function createAdminProduct(data: {
     prebookAdvanceAmount: data.prebookAdvanceAmount ? Number(data.prebookAdvanceAmount) : undefined,
   };
 
-  const customProducts = getCustomProducts();
+  const customProducts = await getCustomProducts();
   customProducts.unshift(newProduct);
-  saveCustomProducts(customProducts);
+  await saveCustomProducts(customProducts);
 
   // Attempt Sanity creation if token has Editor permissions
   if (process.env.SANITY_API_TOKEN) {

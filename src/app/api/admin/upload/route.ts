@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
 import path from 'path';
 import { checkAdminRequestAuth } from '@/lib/adminAuth';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+
+export const dynamic = 'force-dynamic';
+
+const BUCKET = 'store-uploads';
 
 export async function POST(request: NextRequest) {
   if (!checkAdminRequestAuth(request)) {
@@ -28,22 +32,38 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
     const ext = path.extname(file.name) || '.png';
     const cleanBaseName = path
       .basename(file.name, ext)
       .replace(/[^a-zA-Z0-9_-]/g, '_')
       .toLowerCase();
     const filename = `${cleanBaseName}-${Date.now()}${ext}`;
-    const filePath = path.join(uploadsDir, filename);
 
-    fs.writeFileSync(filePath, buffer);
+    const supabaseAdmin = getSupabaseAdmin();
 
-    const publicUrl = `/uploads/${filename}`;
+    // Ensure public bucket exists
+    try {
+      await supabaseAdmin.storage.createBucket(BUCKET, { public: true });
+    } catch {}
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .upload(filename, buffer, {
+        contentType: mimeType,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('Supabase storage upload error:', uploadError);
+      return NextResponse.json(
+        { success: false, error: `Upload error: ${uploadError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(filename);
+    const publicUrl = urlData.publicUrl;
+
     return NextResponse.json({ success: true, url: publicUrl, filename });
   } catch (error: any) {
     console.error('File upload error:', error);

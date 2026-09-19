@@ -334,8 +334,10 @@ export async function POST(request: Request) {
       dbProducts = [];
     }
 
-    const overrides = getProductOverrides();
-    const customProducts = getCustomProducts();
+    const [overrides, customProducts] = await Promise.all([
+      getProductOverrides(),
+      getCustomProducts(),
+    ]);
 
     // Include custom products
     for (const custom of customProducts) {
