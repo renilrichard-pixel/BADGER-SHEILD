@@ -91,40 +91,55 @@ export default async function ProductsPage({
     getCustomProducts(),
   ]);
 
-  const merged = (rawProducts || []).map((p) => {
-    const o = overrides[p._id];
-    if (!o) return p;
-    return {
-      ...p,
-      price: o.price !== undefined ? o.price : p.price,
-      salePrice: o.salePrice !== undefined ? o.salePrice : p.salePrice,
-      stockQty: o.stockQty !== undefined ? o.stockQty : p.stockQty,
-      sizeStock: o.sizeStock !== undefined ? o.sizeStock : p.sizeStock,
-    };
-  });
+  const merged = (rawProducts || [])
+    .filter((p) => !overrides[p._id]?.deleted && overrides[p._id]?.active !== false)
+    .map((p) => {
+      const o = overrides[p._id];
+      if (!o) return p;
+      return {
+        ...p,
+        name: o.name || p.name,
+        categoryName: o.categoryName || p.categoryName,
+        categorySlug: o.categorySlug || p.categorySlug,
+        image: o.image || p.image,
+        images: o.images || p.images,
+        price: o.price !== undefined ? o.price : p.price,
+        salePrice: o.salePrice !== undefined ? o.salePrice : p.salePrice,
+        stockQty: o.stockQty !== undefined ? o.stockQty : p.stockQty,
+        sizeStock: o.sizeStock !== undefined ? o.sizeStock : p.sizeStock,
+        sizes: o.sizes !== undefined ? o.sizes : p.sizes,
+      };
+    });
 
   const matchingCustom = customList
+    .filter((c) => !overrides[c._id]?.deleted && c.active !== false && overrides[c._id]?.active !== false)
     .filter((c) => {
-      if (category && c.categorySlug !== category) return false;
-      if (q && !c.name.toLowerCase().includes(q.toLowerCase())) return false;
+      const o = overrides[c._id];
+      const cat = o?.categorySlug || c.categorySlug;
+      const nm = o?.name || c.name;
+      if (category && cat !== category) return false;
+      if (q && !nm.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     })
-    .map((c) => ({
-      _id: c._id,
-      name: c.name,
-      slug: { current: c.slug },
-      price: c.price,
-      salePrice: c.salePrice,
-      image: c.image,
-      images: c.images,
-      rating: 5,
-      sizes: c.sizes,
-      sizeStock: c.sizeStock,
-      stockQty: c.stockQty,
-      categorySlug: c.categorySlug,
-      categoryName: c.categoryName,
-      newArrival: true,
-    }));
+    .map((c) => {
+      const o = overrides[c._id];
+      return {
+        _id: c._id,
+        name: o?.name || c.name,
+        slug: { current: c.slug },
+        price: o?.price !== undefined ? o.price : c.price,
+        salePrice: o?.salePrice !== undefined ? o.salePrice : c.salePrice,
+        image: o?.image || c.image,
+        images: o?.images || c.images,
+        rating: 5,
+        sizes: o?.sizes || c.sizes,
+        sizeStock: o?.sizeStock || c.sizeStock,
+        stockQty: o?.stockQty !== undefined ? o.stockQty : c.stockQty,
+        categorySlug: o?.categorySlug || c.categorySlug,
+        categoryName: o?.categoryName || c.categoryName,
+        newArrival: true,
+      };
+    });
 
   const products: SanityProduct[] = [...matchingCustom, ...merged];
 

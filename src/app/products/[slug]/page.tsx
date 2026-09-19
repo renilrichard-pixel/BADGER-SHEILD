@@ -90,15 +90,26 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
   if (product) {
     const overrides = await getProductOverrides();
     const o = overrides[product._id];
+    if (o?.deleted || o?.active === false) {
+      return null;
+    }
     if (o) {
       product = {
         ...product,
+        name: o.name || product.name,
+        description: o.description || product.description,
+        categorySlug: o.categorySlug || product.categorySlug,
+        categoryName: o.categoryName || product.categoryName,
+        image: o.image || product.image,
+        images: o.images || product.images,
+        sizes: o.sizes || product.sizes,
         price: o.price !== undefined ? o.price : product.price,
         salePrice: o.salePrice !== undefined ? o.salePrice : product.salePrice,
         stock: o.stockQty !== undefined ? o.stockQty : product.stock,
         sizeStock: o.sizeStock !== undefined ? o.sizeStock : product.sizeStock,
         isPrebook: o.isPrebook !== undefined ? o.isPrebook : product.isPrebook,
-        prebookAdvanceAmount: o.prebookAdvanceAmount !== undefined ? o.prebookAdvanceAmount : product.prebookAdvanceAmount,
+        prebookAdvanceAmount:
+          o.prebookAdvanceAmount !== undefined ? o.prebookAdvanceAmount : product.prebookAdvanceAmount,
       };
     }
   }

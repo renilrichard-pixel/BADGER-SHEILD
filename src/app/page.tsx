@@ -125,32 +125,44 @@ async function getFeaturedProducts(): Promise<HomeProduct[]> {
       getCustomProducts(),
     ]);
 
-    const merged = (data || []).map((p) => {
-      const o = overrides[p._id];
-      if (!o) return p;
-      return {
-        ...p,
-        price: o.price !== undefined ? o.price : p.price,
-        salePrice: o.salePrice !== undefined ? o.salePrice : p.salePrice,
-        stockQty: o.stockQty !== undefined ? o.stockQty : p.stockQty,
-        sizeStock: o.sizeStock !== undefined ? o.sizeStock : p.sizeStock,
-      };
-    });
+    const merged = (data || [])
+      .filter((p) => !overrides[p._id]?.deleted && overrides[p._id]?.active !== false)
+      .map((p) => {
+        const o = overrides[p._id];
+        if (!o) return p;
+        return {
+          ...p,
+          name: o.name || p.name,
+          categoryName: o.categoryName || p.categoryName,
+          image: o.image || p.image,
+          images: o.images || p.images,
+          price: o.price !== undefined ? o.price : p.price,
+          salePrice: o.salePrice !== undefined ? o.salePrice : p.salePrice,
+          stockQty: o.stockQty !== undefined ? o.stockQty : p.stockQty,
+          sizeStock: o.sizeStock !== undefined ? o.sizeStock : p.sizeStock,
+          sizes: o.sizes !== undefined ? o.sizes : p.sizes,
+        };
+      });
 
-    const customMapped: HomeProduct[] = custom.map((c) => ({
-      _id: c._id,
-      name: c.name,
-      slug: { current: c.slug },
-      price: c.price,
-      salePrice: c.salePrice,
-      image: c.image,
-      images: c.images,
-      categoryName: c.categoryName,
-      newArrival: true,
-      sizes: c.sizes,
-      sizeStock: c.sizeStock,
-      stockQty: c.stockQty,
-    }));
+    const customMapped: HomeProduct[] = custom
+      .filter((c) => !overrides[c._id]?.deleted && c.active !== false && overrides[c._id]?.active !== false)
+      .map((c) => {
+        const o = overrides[c._id];
+        return {
+          _id: c._id,
+          name: o?.name || c.name,
+          slug: { current: c.slug },
+          price: o?.price !== undefined ? o.price : c.price,
+          salePrice: o?.salePrice !== undefined ? o.salePrice : c.salePrice,
+          image: o?.image || c.image,
+          images: o?.images || c.images,
+          categoryName: o?.categoryName || c.categoryName,
+          newArrival: true,
+          sizes: o?.sizes || c.sizes,
+          sizeStock: o?.sizeStock || c.sizeStock,
+          stockQty: o?.stockQty !== undefined ? o.stockQty : c.stockQty,
+        };
+      });
 
     return [...customMapped, ...merged];
   } catch (error) {

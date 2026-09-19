@@ -16,6 +16,7 @@ import {
   Tag,
   DollarSign,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import { urlForImage } from '@/sanity/lib/image';
 
@@ -63,14 +64,23 @@ export default function AdminProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Quick Edit State ("Cash Edit")
+  // Edit State ("Full Product Editor")
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editName, setEditName] = useState<string>('');
+  const [editCategory, setEditCategory] = useState<string>('t-shirts');
+  const [editDescription, setEditDescription] = useState<string>('');
+  const [editImageUrl, setEditImageUrl] = useState<string>('');
   const [editPrice, setEditPrice] = useState<number>(0);
   const [editSalePrice, setEditSalePrice] = useState<string>('');
   const [editSizeStock, setEditSizeStock] = useState<Record<string, number>>({});
+  const [editSizeType, setEditSizeType] = useState<'apparel' | 'os'>('apparel');
   const [editIsPrebook, setEditIsPrebook] = useState<boolean>(false);
   const [editPrebookAdvance, setEditPrebookAdvance] = useState<string>('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingEditImage, setUploadingEditImage] = useState(false);
+
+  // Deleting State
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Add Product Modal State
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -82,6 +92,7 @@ export default function AdminProductsPage() {
   const [addImageUrl, setAddImageUrl] = useState('');
   const [addIsPrebook, setAddIsPrebook] = useState<boolean>(false);
   const [addPrebookAdvance, setAddPrebookAdvance] = useState<string>('');
+  const [addSizeType, setAddSizeType] = useState<'apparel' | 'os'>('apparel');
   const [addSizeStock, setAddSizeStock] = useState<Record<string, number>>({
     XS: 0,
     S: 10,
@@ -118,23 +129,62 @@ export default function AdminProductsPage() {
     fetchProducts();
   }, []);
 
-  const openQuickEdit = (p: Product) => {
+  const openEditProduct = (p: Product) => {
     setEditingProduct(p);
+    setEditName(p.name || '');
+    const catSlug = p.categorySlug || 't-shirts';
+    setEditCategory(catSlug);
+    setEditDescription(p.description || '');
+    setEditImageUrl(resolveImage(p) || '');
     setEditPrice(p.price);
     setEditSalePrice(p.salePrice ? String(p.salePrice) : '');
     setEditIsPrebook(p.isPrebook ?? false);
     setEditPrebookAdvance(p.prebookAdvanceAmount ? String(p.prebookAdvanceAmount) : '');
 
-    // Initialize size stock map
-    const stockMap: Record<string, number> = {};
-    SIZES.forEach((s) => (stockMap[s] = 0));
-    (p.sizeStock || []).forEach((row) => {
-      if (row.size) stockMap[row.size.toUpperCase()] = row.quantity;
-    });
-    setEditSizeStock(stockMap);
+    // Check if this product uses 'OS' (One Size), e.g. Caps / Accessories
+    const hasOS =
+      catSlug === 'caps' ||
+      (p.sizes && p.sizes.includes('OS')) ||
+      (p.sizeStock && p.sizeStock.some((s) => s.size?.toUpperCase() === 'OS'));
+
+    if (hasOS) {
+      setEditSizeType('os');
+      const osQuantity =
+        p.sizeStock?.find((s) => s.size?.toUpperCase() === 'OS')?.quantity ??
+        p.stockQty ??
+        20;
+      setEditSizeStock({ OS: osQuantity });
+    } else {
+      setEditSizeType('apparel');
+      const stockMap: Record<string, number> = {};
+      SIZES.forEach((s) => (stockMap[s] = 0));
+      (p.sizeStock || []).forEach((row) => {
+        if (row.size) stockMap[row.size.toUpperCase()] = row.quantity;
+      });
+      setEditSizeStock(stockMap);
+    }
   };
 
-  const handleSaveQuickEdit = async () => {
+  const handleEditSizeTypeChange = (type: 'apparel' | 'os') => {
+    setEditSizeType(type);
+    if (type === 'os') {
+      const currentOS = editSizeStock['OS'] ?? 20;
+      setEditSizeStock({ OS: currentOS });
+    } else {
+      const stockMap: Record<string, number> = {};
+      SIZES.forEach((s) => (stockMap[s] = editSizeStock[s] ?? 0));
+      setEditSizeStock(stockMap);
+    }
+  };
+
+  const handleEditCategoryChange = (newCat: string) => {
+    setEditCategory(newCat);
+    if (newCat === 'caps') {
+      handleEditSizeTypeChange('os');
+    }
+  };
+
+  const handleSaveEdit = async () => {
     if (!editingProduct) return;
     setSavingEdit(true);
 
@@ -143,28 +193,36 @@ export default function AdminProductsPage() {
         ([size, quantity]) => ({ size, quantity: Number(quantity || 0) })
       );
       const totalStock = sizeStockArray.reduce((acc, row) => acc + row.quantity, 0);
+      const sizesArray = sizeStockArray.map((s) => s.size);
+      const catObj = CATEGORIES.find((c) => c.slug === editCategory);
 
       const res = await fetch('/api/admin/products', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: editingProduct._id,
+          name: editName.trim() || editingProduct.name,
+          categorySlug: editCategory,
+          categoryName: catObj?.name || editCategory,
+          description: editDescription.trim(),
+          imageUrl: editImageUrl || undefined,
+          sizes: sizesArray,
           price: Number(editPrice),
           salePrice: editSalePrice ? Number(editSalePrice) : undefined,
           stockQty: totalStock,
           sizeStock: sizeStockArray,
           isPrebook: editIsPrebook,
-          prebookAdvanceAmount: editIsPrebook && editPrebookAdvance ? Number(editPrebookAdvance) : undefined,
+          prebookAdvanceAmount:
+            editIsPrebook && editPrebookAdvance ? Number(editPrebookAdvance) : undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        alert(data.error || 'Failed to update product pricing/stock.');
+        alert(data.error || 'Failed to update product.');
         return;
       }
 
-      // Update local list
       setProducts((prev) =>
         prev.map((p) => (p._id === editingProduct._id ? data.product : p))
       );
@@ -173,6 +231,62 @@ export default function AdminProductsPage() {
       alert(err?.message || 'Failed to save edits.');
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteProduct = async (p: Product) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${p.name}"?\n\nThis will immediately remove it from your store and admin portal.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(p._id);
+    try {
+      const res = await fetch(`/api/admin/products?productId=${encodeURIComponent(p._id)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || 'Failed to delete product.');
+        return;
+      }
+
+      setProducts((prev) => prev.filter((item) => item._id !== p._id));
+    } catch (err: any) {
+      alert(err?.message || 'Error deleting product.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingEditImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || 'Image upload failed.');
+        return;
+      }
+
+      setEditImageUrl(data.url);
+    } catch (err: any) {
+      alert(err?.message || 'Upload failed.');
+    } finally {
+      setUploadingEditImage(false);
     }
   };
 
@@ -204,6 +318,40 @@ export default function AdminProductsPage() {
     }
   };
 
+  const handleAddCategoryChange = (newCat: string) => {
+    setAddCategory(newCat);
+    if (newCat === 'caps') {
+      setAddSizeType('os');
+      setAddSizeStock({ OS: 15 });
+    } else if (addSizeType === 'os') {
+      setAddSizeType('apparel');
+      setAddSizeStock({
+        XS: 0,
+        S: 10,
+        M: 15,
+        L: 20,
+        XL: 10,
+        XXL: 5,
+      });
+    }
+  };
+
+  const handleAddSizeTypeChange = (type: 'apparel' | 'os') => {
+    setAddSizeType(type);
+    if (type === 'os') {
+      setAddSizeStock({ OS: 15 });
+    } else {
+      setAddSizeStock({
+        XS: 0,
+        S: 10,
+        M: 15,
+        L: 20,
+        XL: 10,
+        XXL: 5,
+      });
+    }
+  };
+
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addName.trim() || !addPrice) {
@@ -217,6 +365,7 @@ export default function AdminProductsPage() {
       const sizeStockArray: SizeStock[] = Object.entries(addSizeStock).map(
         ([size, quantity]) => ({ size, quantity: Number(quantity || 0) })
       );
+      const sizesArray = sizeStockArray.map((s) => s.size);
 
       const res = await fetch('/api/admin/products', {
         method: 'POST',
@@ -229,10 +378,11 @@ export default function AdminProductsPage() {
           salePrice: addSalePrice ? Number(addSalePrice) : undefined,
           description: addDescription.trim(),
           imageUrl: addImageUrl || undefined,
-          sizes: SIZES,
+          sizes: sizesArray,
           sizeStock: sizeStockArray,
           isPrebook: addIsPrebook,
-          prebookAdvanceAmount: addIsPrebook && addPrebookAdvance ? Number(addPrebookAdvance) : undefined,
+          prebookAdvanceAmount:
+            addIsPrebook && addPrebookAdvance ? Number(addPrebookAdvance) : undefined,
         }),
       });
 
@@ -254,6 +404,15 @@ export default function AdminProductsPage() {
       setAddImageUrl('');
       setAddIsPrebook(false);
       setAddPrebookAdvance('');
+      setAddSizeType('apparel');
+      setAddSizeStock({
+        XS: 0,
+        S: 10,
+        M: 15,
+        L: 20,
+        XL: 10,
+        XXL: 5,
+      });
     } catch (err: any) {
       alert(err?.message || 'Error creating product.');
     } finally {
@@ -282,7 +441,11 @@ export default function AdminProductsPage() {
 
   const filteredProducts = products.filter((p) => {
     const q = searchQuery.toLowerCase().trim();
-    return !q || p.name.toLowerCase().includes(q) || p.categoryName.toLowerCase().includes(q);
+    return (
+      !q ||
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.categoryName || '').toLowerCase().includes(q)
+    );
   });
 
   return (
@@ -353,7 +516,7 @@ export default function AdminProductsPage() {
                 <th className="py-3.5 px-4">Price (Cash)</th>
                 <th className="py-3.5 px-4">Sale Price</th>
                 <th className="py-3.5 px-4">Size Stock Breakdown</th>
-                <th className="py-3.5 px-4 text-right">Quick Edit</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -372,7 +535,7 @@ export default function AdminProductsPage() {
                           {imgUrl ? (
                             <Image
                               src={imgUrl}
-                              alt={product.name}
+                              alt={product.name || 'Product'}
                               fill
                               sizes="48px"
                               className="object-cover"
@@ -382,7 +545,7 @@ export default function AdminProductsPage() {
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-white text-sm">{product.name}</p>
+                          <p className="font-bold text-white text-sm">{product.name || 'Untitled Product'}</p>
                           <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
                             ID: {product._id.slice(0, 16)}...
                           </p>
@@ -449,14 +612,26 @@ export default function AdminProductsPage() {
                       </p>
                     </td>
 
-                    {/* Quick Edit Action */}
+                    {/* Actions: Edit & Delete */}
                     <td className="py-4 px-4 align-top text-right">
-                      <button
-                        onClick={() => openQuickEdit(product)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-white/20 text-[10px] font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-colors"
-                      >
-                        <Edit2 className="w-3 h-3" /> Edit Cash/Stock
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openEditProduct(product)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-black text-[10px] font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors"
+                          title="Edit product name, image, category, price & inventory"
+                        >
+                          <Edit2 className="w-3 h-3" /> Edit
+                        </button>
+                        <button
+                          disabled={deletingId === product._id}
+                          onClick={() => handleDeleteProduct(product)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-red-800/40 text-red-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-950/60 hover:text-red-200 transition-colors disabled:opacity-50"
+                          title="Delete product"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -466,16 +641,16 @@ export default function AdminProductsPage() {
         )}
       </div>
 
-      {/* ── Quick Edit Modal ("Cash Edit") ── */}
+      {/* ── Edit Product Modal ── */}
       {editingProduct && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-zinc-950 border border-white/20 max-w-lg w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-6 relative">
+          <div className="bg-zinc-950 border border-white/20 max-w-xl w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-6 relative">
             <div className="flex items-start justify-between border-b border-white/10 pb-4">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">
-                  Quick Cash & Inventory Edit
+                  Product Management
                 </span>
-                <h2 className="text-xl font-black text-white mt-1">{editingProduct.name}</h2>
+                <h2 className="text-xl font-black text-white mt-1">Edit Product</h2>
               </div>
               <button
                 onClick={() => setEditingProduct(null)}
@@ -486,11 +661,42 @@ export default function AdminProductsPage() {
             </div>
 
             <div className="space-y-4 text-xs">
-              {/* Price & Sale Price */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Product Name */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="e.g. Badger Stealth Cap"
+                  className="w-full bg-zinc-900 border border-white/15 px-3 py-2 text-sm text-white focus:outline-none focus:border-white"
+                />
+              </div>
+
+              {/* Category & Pricing */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
-                    Regular Price (₹)
+                    Category *
+                  </label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => handleEditCategoryChange(e.target.value)}
+                    className="w-full bg-zinc-900 border border-white/15 px-3 py-2 text-xs text-white focus:outline-none focus:border-white"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.slug} value={c.slug}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+                    Regular Price (₹) *
                   </label>
                   <input
                     type="number"
@@ -502,7 +708,7 @@ export default function AdminProductsPage() {
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
-                    Sale Price (₹) (Optional)
+                    Sale Price (₹)
                   </label>
                   <input
                     type="number"
@@ -556,42 +762,144 @@ export default function AdminProductsPage() {
                 )}
               </div>
 
-              {/* Stock by Size */}
-              <div className="space-y-2 pt-2 border-t border-white/10">
+              {/* Description */}
+              <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
-                  Stock Units by Size
+                  Description
                 </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {SIZES.map((size) => (
-                    <div key={size} className="bg-zinc-900 p-2 border border-white/10 flex items-center justify-between">
-                      <span className="font-bold text-zinc-400 text-xs">{size}</span>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Premium cotton twill, adjustable strap, minimal embroidery..."
+                  className="w-full bg-zinc-900 border border-white/15 px-3 py-2 text-xs text-white focus:outline-none focus:border-white"
+                />
+              </div>
+
+              {/* Product Image */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+                  Product Image
+                </label>
+                <div className="flex items-center gap-4">
+                  {editImageUrl && (
+                    <div className="w-14 h-18 bg-zinc-900 border border-white/20 relative overflow-hidden shrink-0">
+                      <Image
+                        src={editImageUrl}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+                  <label className="flex-1 border-2 border-dashed border-white/20 hover:border-white/40 p-4 text-center cursor-pointer transition-colors">
+                    <UploadCloud className="w-5 h-5 mx-auto text-zinc-400 mb-1" />
+                    <span className="text-xs text-zinc-300 block">
+                      {uploadingEditImage ? 'Uploading image…' : 'Click to replace product image (JPG, PNG, WEBP)'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditImageUpload}
+                      disabled={uploadingEditImage}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Size System & Inventory */}
+              <div className="space-y-3 pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+                    Sizing Mode & Inventory
+                  </label>
+                  <div className="flex rounded bg-zinc-900 p-0.5 border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => handleEditSizeTypeChange('apparel')}
+                      className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors ${
+                        editSizeType === 'apparel'
+                          ? 'bg-white text-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Apparel (XS - XXL)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEditSizeTypeChange('os')}
+                      className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors ${
+                        editSizeType === 'os'
+                          ? 'bg-white text-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      One Size (OS) • Caps
+                    </button>
+                  </div>
+                </div>
+
+                {editSizeType === 'os' ? (
+                  <div className="bg-zinc-900/90 border border-white/10 p-3.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-white uppercase tracking-wider">
+                        One Size (OS) Stock
+                      </p>
+                      <p className="text-[10px] text-zinc-400">
+                        Default sizing for caps, hats, beanies and single-size accessories.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-400">Units:</span>
                       <input
                         type="number"
                         min="0"
-                        value={editSizeStock[size] ?? 0}
+                        value={editSizeStock['OS'] ?? 0}
                         onChange={(e) =>
                           setEditSizeStock({
-                            ...editSizeStock,
-                            [size]: Math.max(0, parseInt(e.target.value, 10) || 0),
+                            OS: Math.max(0, parseInt(e.target.value, 10) || 0),
                           })
                         }
-                        className="w-14 bg-black border border-white/15 text-center text-xs font-mono text-white py-1 focus:outline-none focus:border-white"
+                        className="w-20 bg-black border border-white/20 text-center text-sm font-mono text-white py-1.5 focus:outline-none focus:border-white"
                       />
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {SIZES.map((size) => (
+                      <div key={size} className="bg-zinc-900 p-2 border border-white/10 text-center">
+                        <span className="font-bold text-zinc-400 text-xs block mb-1">{size}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editSizeStock[size] ?? 0}
+                          onChange={(e) =>
+                            setEditSizeStock({
+                              ...editSizeStock,
+                              [size]: Math.max(0, parseInt(e.target.value, 10) || 0),
+                            })
+                          }
+                          className="w-full bg-black border border-white/15 text-center text-xs font-mono text-white py-1 focus:outline-none focus:border-white"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
               <button
+                type="button"
                 onClick={() => setEditingProduct(null)}
                 className="px-4 py-2 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSaveQuickEdit}
+                type="button"
+                onClick={handleSaveEdit}
                 disabled={savingEdit}
                 className="px-6 py-2 bg-white text-black text-xs font-black uppercase tracking-wider hover:bg-zinc-200 transition-colors disabled:opacity-50"
               >
@@ -645,7 +953,7 @@ export default function AdminProductsPage() {
                   </label>
                   <select
                     value={addCategory}
-                    onChange={(e) => setAddCategory(e.target.value)}
+                    onChange={(e) => handleAddCategoryChange(e.target.value)}
                     className="w-full bg-zinc-900 border border-white/15 px-3 py-2 text-xs text-white focus:outline-none focus:border-white"
                   >
                     {CATEGORIES.map((c) => (
@@ -774,30 +1082,84 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              {/* Stock by Size */}
-              <div className="space-y-2 pt-2 border-t border-white/10">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
-                  Initial Stock Quantity by Size
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {SIZES.map((size) => (
-                    <div key={size} className="bg-zinc-900 p-2 border border-white/10 text-center">
-                      <span className="font-bold text-zinc-400 text-xs block mb-1">{size}</span>
+              {/* Sizing Mode & Inventory */}
+              <div className="space-y-3 pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+                    Sizing Mode & Initial Stock
+                  </label>
+                  <div className="flex rounded bg-zinc-900 p-0.5 border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => handleAddSizeTypeChange('apparel')}
+                      className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors ${
+                        addSizeType === 'apparel'
+                          ? 'bg-white text-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Apparel (XS - XXL)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddSizeTypeChange('os')}
+                      className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors ${
+                        addSizeType === 'os'
+                          ? 'bg-white text-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      One Size (OS) • Caps
+                    </button>
+                  </div>
+                </div>
+
+                {addSizeType === 'os' ? (
+                  <div className="bg-zinc-900/90 border border-white/10 p-3.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-white uppercase tracking-wider">
+                        One Size (OS) Stock
+                      </p>
+                      <p className="text-[10px] text-zinc-400">
+                        Default sizing for caps, hats, beanies and single-size accessories.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-400">Units:</span>
                       <input
                         type="number"
                         min="0"
-                        value={addSizeStock[size] ?? 0}
+                        value={addSizeStock['OS'] ?? 0}
                         onChange={(e) =>
                           setAddSizeStock({
-                            ...addSizeStock,
-                            [size]: Math.max(0, parseInt(e.target.value, 10) || 0),
+                            OS: Math.max(0, parseInt(e.target.value, 10) || 0),
                           })
                         }
-                        className="w-full bg-black border border-white/15 text-center text-xs font-mono text-white py-1 focus:outline-none"
+                        className="w-20 bg-black border border-white/20 text-center text-sm font-mono text-white py-1.5 focus:outline-none focus:border-white"
                       />
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {SIZES.map((size) => (
+                      <div key={size} className="bg-zinc-900 p-2 border border-white/10 text-center">
+                        <span className="font-bold text-zinc-400 text-xs block mb-1">{size}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={addSizeStock[size] ?? 0}
+                          onChange={(e) =>
+                            setAddSizeStock({
+                              ...addSizeStock,
+                              [size]: Math.max(0, parseInt(e.target.value, 10) || 0),
+                            })
+                          }
+                          className="w-full bg-black border border-white/15 text-center text-xs font-mono text-white py-1 focus:outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}

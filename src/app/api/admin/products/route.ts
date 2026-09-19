@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminRequestAuth } from '@/lib/adminAuth';
 import {
   getAllAdminProducts,
-  updateProductPriceAndStock,
+  updateAdminProduct,
   createAdminProduct,
+  deleteAdminProduct,
 } from '@/lib/adminProducts';
 
 export const dynamic = 'force-dynamic';
@@ -32,20 +33,44 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { productId, price, salePrice, stockQty, sizeStock, name, isPrebook, prebookAdvanceAmount } = body;
+    const {
+      productId,
+      name,
+      categorySlug,
+      categoryName,
+      description,
+      imageUrl,
+      sizes,
+      price,
+      salePrice,
+      stockQty,
+      sizeStock,
+      isPrebook,
+      prebookAdvanceAmount,
+    } = body;
 
     if (!productId) {
       return NextResponse.json({ success: false, error: 'productId is required.' }, { status: 400 });
     }
 
-    const updated = await updateProductPriceAndStock(productId, {
+    const updated = await updateAdminProduct(productId, {
+      name,
+      categorySlug,
+      categoryName,
+      description,
+      imageUrl,
+      sizes,
       price: price !== undefined ? Number(price) : undefined,
       salePrice: salePrice !== undefined ? (salePrice ? Number(salePrice) : undefined) : undefined,
       stockQty: stockQty !== undefined ? Number(stockQty) : undefined,
       sizeStock,
-      name,
       isPrebook: isPrebook !== undefined ? Boolean(isPrebook) : undefined,
-      prebookAdvanceAmount: prebookAdvanceAmount !== undefined ? (prebookAdvanceAmount ? Number(prebookAdvanceAmount) : undefined) : undefined,
+      prebookAdvanceAmount:
+        prebookAdvanceAmount !== undefined
+          ? prebookAdvanceAmount
+            ? Number(prebookAdvanceAmount)
+            : undefined
+          : undefined,
     });
 
     return NextResponse.json({ success: true, product: updated });
@@ -53,6 +78,34 @@ export async function PATCH(request: NextRequest) {
     console.error('Error updating product:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!checkAdminRequestAuth(request)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    let productId = searchParams.get('productId');
+    if (!productId) {
+      const body = await request.json().catch(() => ({}));
+      productId = body.productId;
+    }
+
+    if (!productId) {
+      return NextResponse.json({ success: false, error: 'productId is required.' }, { status: 400 });
+    }
+
+    await deleteAdminProduct(productId);
+    return NextResponse.json({ success: true, message: 'Product deleted successfully.' });
+  } catch (error: any) {
+    console.error('Error deleting product:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to delete product' },
       { status: 500 }
     );
   }

@@ -20,6 +20,7 @@ export interface AdminProduct {
   sizeStock?: SizeStockEntry[];
   stockQty?: number;
   active?: boolean;
+  deleted?: boolean;
   newArrival?: boolean;
   bestSeller?: boolean;
   isCustom?: boolean;
@@ -128,33 +129,40 @@ export async function getAllAdminProducts(): Promise<AdminProduct[]> {
     getCustomProducts(),
   ]);
 
-  // Apply overrides to Sanity products
-  const mergedSanity = sanityProducts.map((p) => {
-    const override = overrides[p._id];
-    if (!override) return p;
-    return { ...p, ...override };
-  });
+  // Apply overrides to Sanity products, filtering out deleted ones
+  const mergedSanity = sanityProducts
+    .filter((p) => !overrides[p._id]?.deleted)
+    .map((p) => {
+      const override = overrides[p._id];
+      if (!override) return p;
+      return { ...p, ...override };
+    });
 
-  // Apply overrides to custom products
-  const mergedCustom = customProducts.map((p) => {
-    const override = overrides[p._id];
-    if (!override) return p;
-    return { ...p, ...override };
-  });
+  // Apply overrides to custom products, filtering out deleted ones
+  const mergedCustom = customProducts
+    .filter((p) => !overrides[p._id]?.deleted)
+    .map((p) => {
+      const override = overrides[p._id];
+      if (!override) return p;
+      return { ...p, ...override };
+    });
 
   return [...mergedCustom, ...mergedSanity];
 }
 
-export async function updateProductPriceAndStock(
+export async function updateAdminProduct(
   productId: string,
   updates: {
+    name?: string;
+    categorySlug?: string;
+    categoryName?: string;
+    description?: string;
+    imageUrl?: string;
+    sizes?: string[];
     price?: number;
     salePrice?: number;
     stockQty?: number;
     sizeStock?: SizeStockEntry[];
-    name?: string;
-    categorySlug?: string;
-    categoryName?: string;
     isPrebook?: boolean;
     prebookAdvanceAmount?: number;
   }
@@ -162,10 +170,17 @@ export async function updateProductPriceAndStock(
   const overrides = await getProductOverrides();
   const currentOverride = overrides[productId] || {};
 
-  overrides[productId] = {
+  const cleanUpdates: Partial<AdminProduct> = {
     ...currentOverride,
     ...updates,
   };
+
+  if (updates.imageUrl) {
+    cleanUpdates.image = updates.imageUrl;
+    cleanUpdates.images = [updates.imageUrl];
+  }
+
+  overrides[productId] = cleanUpdates;
   await saveProductOverrides(overrides);
 
   // If this product is in custom products, also update in custom-products.json
@@ -174,13 +189,13 @@ export async function updateProductPriceAndStock(
   if (customIdx >= 0) {
     customProducts[customIdx] = {
       ...customProducts[customIdx],
-      ...updates,
+      ...cleanUpdates,
     };
     await saveCustomProducts(customProducts);
   }
 
   // Attempt Sanity update non-blockingly if token is configured
-  if (process.env.SANITY_API_TOKEN) {
+  if (process.env.SANITY_API_TOKEN && !productId.startsWith('prod-custom-')) {
     try {
       const writeClient = createClient({
         projectId,
@@ -191,20 +206,58 @@ export async function updateProductPriceAndStock(
       });
 
       const patch: any = {};
+      if (updates.name !== undefined) patch.name = updates.name;
+      if (updates.description !== undefined) patch.description = updates.description;
       if (updates.price !== undefined) patch.price = updates.price;
       if (updates.salePrice !== undefined) patch.salePrice = updates.salePrice;
       if (updates.stockQty !== undefined) patch.stock = updates.stockQty;
       if (updates.sizeStock !== undefined) patch.sizeStock = updates.sizeStock;
+      if (updates.sizes !== undefined) patch.sizes = updates.sizes;
 
       await writeClient.patch(productId).set(patch).commit();
     } catch (err) {
-      // Non-blocking: Local override is already active and valid
-      console.warn(`Note: Sanity patch skipped for ${productId} (using local persistent override)`);
+      console.warn(`Note: Sanity patch skipped for ${productId} (using cloud persistent override)`);
     }
   }
 
   const all = await getAllAdminProducts();
   return all.find((p) => p._id === productId) || null;
+}
+
+export const updateProductPriceAndStock = updateAdminProduct;
+
+export async function deleteAdminProduct(productId: string): Promise<boolean> {
+  // 1. Remove from custom-products.json if it was a custom product
+  const customProducts = await getCustomProducts();
+  const remainingCustom = customProducts.filter((p) => p._id !== productId);
+  if (remainingCustom.length !== customProducts.length) {
+    await saveCustomProducts(remainingCustom);
+  }
+
+  // 2. Mark as deleted in product-overrides.json
+  const overrides = await getProductOverrides();
+  overrides[productId] = {
+    ...(overrides[productId] || {}),
+    deleted: true,
+    active: false,
+  };
+  await saveProductOverrides(overrides);
+
+  // 3. Non-blocking Sanity deletion attempt
+  if (process.env.SANITY_API_TOKEN && !productId.startsWith('prod-custom-')) {
+    try {
+      const writeClient = createClient({
+        projectId,
+        dataset,
+        apiVersion,
+        useCdn: false,
+        token: process.env.SANITY_API_TOKEN,
+      });
+      await writeClient.delete(productId);
+    } catch {}
+  }
+
+  return true;
 }
 
 export async function createAdminProduct(data: {
