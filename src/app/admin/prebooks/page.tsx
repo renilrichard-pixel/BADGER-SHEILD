@@ -196,7 +196,7 @@ export default function AdminPrebooksPage() {
   return (
     <div className="space-y-8">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[9px] font-black uppercase tracking-[0.35em] text-amber-400">
@@ -206,7 +206,7 @@ export default function AdminPrebooksPage() {
               <Sparkles className="w-2.5 h-2.5" /> Pre-Books Active
             </span>
           </div>
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mt-1">
             Pre-Book Orders & Balances
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
@@ -214,11 +214,11 @@ export default function AdminPrebooksPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={fetchOrders}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
+            className="flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3.5 py-2.5 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -226,77 +226,75 @@ export default function AdminPrebooksPage() {
 
           <Link
             href="/admin/products"
-            className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-black font-black text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors shadow-sm"
+            className="flex-1 sm:flex-initial justify-center flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-black font-black text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors shadow-sm"
           >
-            Configure Product Pre-Books
+            Configure
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-      </div>
-
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      </div>      {/* Metrics Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Advance Collected */}
-        <div className="bg-zinc-950 p-5 border border-white/10 relative overflow-hidden">
+        <div className="bg-zinc-950 p-3.5 sm:p-5 border border-white/10 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-              Advance Collected (Paid)
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-400 truncate">
+              Advance Paid
             </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-white font-mono mt-2">
+          <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white font-mono mt-1 sm:mt-2">
             {money(advanceCollectedTotal)}
           </p>
-          <p className="text-[10px] text-emerald-400 mt-1 font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Captured via Razorpay online
+          <p className="text-[9px] sm:text-[10px] text-emerald-400 mt-0.5 sm:mt-1 font-semibold flex items-center gap-1 truncate">
+            <CheckCircle2 className="w-3 h-3 shrink-0" /> Razorpay online
           </p>
         </div>
 
         {/* Balance Due to Collect */}
-        <div className="bg-zinc-950 p-5 border border-amber-500/30 relative overflow-hidden">
+        <div className="bg-zinc-950 p-3.5 sm:p-5 border border-amber-500/30 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-              Balance Pending Collection
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-amber-400 truncate">
+              Balance Due
             </span>
-            <DollarSign className="w-4 h-4 text-amber-400" />
+            <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-amber-300 font-mono mt-2">
+          <p className="text-lg sm:text-2xl lg:text-3xl font-black text-amber-300 font-mono mt-1 sm:mt-2">
             {money(balancePendingTotal)}
           </p>
-          <p className="text-[10px] text-zinc-400 mt-1 font-semibold">
-            To collect at dispatch / door delivery
+          <p className="text-[9px] sm:text-[10px] text-zinc-400 mt-0.5 sm:mt-1 truncate">
+            Due on delivery
           </p>
         </div>
 
-        {/* Total Pre-Book Orders */}
-        <div className="bg-zinc-950 p-5 border border-white/10">
+        {/* Pre-Book Orders Count */}
+        <div className="bg-zinc-950 p-3.5 sm:p-5 border border-white/10">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-              Total Pre-Book Orders
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-400 truncate">
+              Pre-Bookings
             </span>
-            <Clock className="w-4 h-4 text-zinc-400" />
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500 shrink-0" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-white font-mono mt-2">
+          <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white font-mono mt-1 sm:mt-2">
             {totalPrebooksCount}
           </p>
-          <p className="text-[10px] text-zinc-400 mt-1 font-semibold">
-            Customers awaiting reservation
+          <p className="text-[9px] sm:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 truncate">
+            Reserved items
           </p>
         </div>
 
-        {/* Fulfillment Pipeline */}
-        <div className="bg-zinc-950 p-5 border border-white/10">
+        {/* Ready / Processing */}
+        <div className="bg-zinc-950 p-3.5 sm:p-5 border border-white/10">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-              Active Fulfillment
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-400 truncate">
+              Ready / Out
             </span>
-            <Truck className="w-4 h-4 text-zinc-400" />
+            <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-white font-mono mt-2">
+          <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white font-mono mt-1 sm:mt-2">
             {readyOrShippedCount}
           </p>
-          <p className="text-[10px] text-blue-400 mt-1 font-semibold">
-            Confirmed & in production / transit
+          <p className="text-[9px] sm:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 truncate">
+            Confirmed / in route
           </p>
         </div>
       </div>
@@ -333,7 +331,11 @@ export default function AdminPrebooksPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="border border-white/10 bg-zinc-950 overflow-x-auto">
+      <div className="border border-white/10 bg-zinc-950 overflow-x-auto -mx-3 sm:mx-0">
+        <div className="sm:hidden text-[10px] text-zinc-400 px-3 py-2 border-b border-white/10 bg-zinc-900/40 flex items-center justify-between">
+          <span>Scroll table horizontally for full data</span>
+          <span>→</span>
+        </div>
         {loading ? (
           <div className="py-20 text-center text-zinc-500 text-xs font-mono">
             Loading pre-book orders…
@@ -355,7 +357,7 @@ export default function AdminPrebooksPage() {
             </div>
           </div>
         ) : (
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[760px]">
             <thead>
               <tr className="border-b border-white/10 bg-zinc-900/50 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">
                 <th className="py-3.5 px-4">Order & Date</th>
@@ -481,10 +483,10 @@ export default function AdminPrebooksPage() {
         )}
       </div>
 
-      {/* Order Details Drawer / Modal */}
+      {/* Pre-Book Details Drawer / Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-zinc-950 border border-white/20 max-w-xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-zinc-950 border border-white/20 max-w-2xl w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-6 relative">
             <div className="flex items-start justify-between border-b border-white/10 pb-4">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-400">

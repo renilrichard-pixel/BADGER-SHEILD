@@ -105,21 +105,21 @@ export default function AdminHeroPage() {
   return (
     <div className="space-y-8 max-w-5xl">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6">
         <div>
           <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-400">
             Storefront Presentation
           </span>
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mt-1">
             Hero Section Manager
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <a
             href="/"
             target="_blank"
-            className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
+            className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-4 py-2.5 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
           >
             Live Homepage <ExternalLink className="w-3.5 h-3.5" />
           </a>
@@ -151,7 +151,7 @@ export default function AdminHeroPage() {
             </div>
 
             {/* Simulated Hero Banner */}
-            <div className="relative min-h-[300px] sm:min-h-[360px] border border-white/10 overflow-hidden flex items-center p-6 sm:p-10">
+            <div className="relative min-h-[220px] sm:min-h-[360px] border border-white/10 overflow-hidden flex items-center p-4 sm:p-10">
               {settings.image && (
                 <Image
                   src={settings.image}
@@ -162,8 +162,8 @@ export default function AdminHeroPage() {
               )}
               <div className="absolute inset-0 bg-black/40 z-1" />
 
-              <div className="relative z-10 max-w-lg space-y-4">
-                <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white leading-tight whitespace-pre-line">
+              <div className="relative z-10 max-w-lg space-y-3 sm:space-y-4">
+                <h2 className="text-lg sm:text-3xl font-black uppercase tracking-tight text-white leading-tight whitespace-pre-line">
                   {settings.headline || 'Headline goes here'}
                 </h2>
                 <p className="text-xs sm:text-sm text-white/80 leading-relaxed max-w-md">
@@ -317,7 +317,7 @@ export default function AdminHeroPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-2 px-8 py-3.5 bg-white text-black font-black text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                className="w-full sm:w-auto justify-center flex items-center gap-2 px-8 py-3.5 bg-white text-black font-black text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 transition-colors disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 {saving ? 'Saving & Publishing…' : 'Publish to Homepage'}

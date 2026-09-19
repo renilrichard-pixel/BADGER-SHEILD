@@ -288,21 +288,21 @@ export default function AdminProductsPage() {
   return (
     <div className="space-y-8">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6">
         <div>
           <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-400">
             Catalog & Inventory
           </span>
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mt-1">
             Products & Pricing ("Cash Edit")
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={fetchProducts}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
+            className="flex-1 sm:flex-initial justify-center flex items-center gap-2 px-3.5 py-2.5 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -310,10 +310,10 @@ export default function AdminProductsPage() {
 
           <button
             onClick={() => setIsAddOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white text-black font-black text-xs uppercase tracking-wider hover:bg-zinc-200 transition-colors shadow-sm"
+            className="flex-1 sm:flex-initial justify-center flex items-center gap-2 px-4 py-2.5 bg-white text-black font-black text-xs uppercase tracking-wider hover:bg-zinc-200 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            Add New Product
+            Add Product
           </button>
         </div>
       </div>
@@ -331,7 +331,11 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Product List Table */}
-      <div className="border border-white/10 bg-zinc-950 overflow-x-auto">
+      <div className="border border-white/10 bg-zinc-950 overflow-x-auto -mx-3 sm:mx-0">
+        <div className="sm:hidden text-[10px] text-zinc-400 px-3 py-2 border-b border-white/10 bg-zinc-900/40 flex items-center justify-between">
+          <span>Scroll table horizontally for full data</span>
+          <span>→</span>
+        </div>
         {loading ? (
           <div className="py-20 text-center text-zinc-500 text-xs font-mono">
             Loading products catalog…
@@ -341,7 +345,7 @@ export default function AdminProductsPage() {
             No products found.
           </div>
         ) : (
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-white/10 bg-zinc-900/50 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">
                 <th className="py-3.5 px-4">Item</th>
@@ -464,8 +468,8 @@ export default function AdminProductsPage() {
 
       {/* ── Quick Edit Modal ("Cash Edit") ── */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-zinc-950 border border-white/20 max-w-lg w-full p-6 sm:p-8 space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-zinc-950 border border-white/20 max-w-lg w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-6 relative">
             <div className="flex items-start justify-between border-b border-white/10 pb-4">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">
@@ -600,8 +604,8 @@ export default function AdminProductsPage() {
 
       {/* ── Add New Product Modal ── */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-zinc-950 border border-white/20 max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-zinc-950 border border-white/20 max-w-xl w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-6 relative">
             <div className="flex items-start justify-between border-b border-white/10 pb-4">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">

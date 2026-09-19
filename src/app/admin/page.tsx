@@ -176,12 +176,12 @@ export default function AdminOrdersPage() {
   return (
     <div className="space-y-8">
       {/* Page Title & Refresh */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6">
         <div>
           <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-400">
             Orders & Revenue Dashboard
           </span>
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mt-1">
             Store Orders & Cash
           </h1>
         </div>
@@ -189,7 +189,7 @@ export default function AdminOrdersPage() {
         <button
           onClick={fetchOrders}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
+          className="w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border border-white/15 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white hover:border-white transition-colors"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -198,46 +198,46 @@ export default function AdminOrdersPage() {
 
       {/* KPI Cards ("Cash & Revenue") */}
       {metrics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="border border-white/10 bg-zinc-950 p-5 relative overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="border border-white/10 bg-zinc-950 p-3.5 sm:p-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest">Total Revenue</span>
-              <DollarSign className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">Total Revenue</span>
+              <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-white">{money(metrics.totalRevenue)}</p>
-            <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider">
+            <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white">{money(metrics.totalRevenue)}</p>
+            <p className="text-[9px] sm:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 uppercase tracking-wider truncate">
               {metrics.confirmedCount + metrics.shippedCount + metrics.deliveredCount} paid orders
             </p>
           </div>
 
-          <div className="border border-white/10 bg-zinc-950 p-5 relative overflow-hidden">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest">Today's Cash</span>
-              <Clock className="w-4 h-4 text-blue-400" />
+          <div className="border border-white/10 bg-zinc-950 p-3.5 sm:p-5 relative overflow-hidden">
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">Today's Cash</span>
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" />
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-white">{money(metrics.todayRevenue)}</p>
-            <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider">
+            <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white">{money(metrics.todayRevenue)}</p>
+            <p className="text-[9px] sm:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 uppercase tracking-wider truncate">
               {metrics.todayOrdersCount} orders placed today
             </p>
           </div>
 
-          <div className="border border-white/10 bg-zinc-950 p-5">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest">Confirmed</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <div className="border border-white/10 bg-zinc-950 p-3.5 sm:p-5">
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">Confirmed</span>
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-white">{metrics.confirmedCount}</p>
-            <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider">Ready for packing</p>
+            <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white">{metrics.confirmedCount}</p>
+            <p className="text-[9px] sm:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 uppercase tracking-wider truncate">Ready for packing</p>
           </div>
 
-          <div className="border border-white/10 bg-zinc-950 p-5">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest">Shipped / Out</span>
-              <Truck className="w-4 h-4 text-purple-400" />
+          <div className="border border-white/10 bg-zinc-950 p-3.5 sm:p-5">
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">Shipped / Out</span>
+              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 shrink-0" />
             </div>
-            <p className="text-2xl sm:text-3xl font-black text-white">{metrics.shippedCount}</p>
-            <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider">In transit to buyers</p>
+            <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white">{metrics.shippedCount}</p>
+            <p className="text-[9px] sm:text-[10px] text-zinc-500 mt-0.5 sm:mt-1 uppercase tracking-wider truncate">In transit</p>
           </div>
         </div>
       )}
@@ -273,7 +273,11 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="border border-white/10 bg-zinc-950 overflow-x-auto">
+      <div className="border border-white/10 bg-zinc-950 overflow-x-auto -mx-3 sm:mx-0">
+        <div className="sm:hidden text-[10px] text-zinc-400 px-3 py-2 border-b border-white/10 bg-zinc-900/40 flex items-center justify-between">
+          <span>Scroll table horizontally for full data</span>
+          <span>→</span>
+        </div>
         {loading ? (
           <div className="py-20 text-center text-zinc-500 text-xs font-mono">
             Loading orders & transactions…
@@ -283,7 +287,7 @@ export default function AdminOrdersPage() {
             No orders match your search or filter criteria.
           </div>
         ) : (
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-white/10 bg-zinc-900/50 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">
                 <th className="py-3.5 px-4">Order ID & Date</th>
@@ -409,8 +413,8 @@ export default function AdminOrdersPage() {
 
       {/* Order Details Drawer / Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-zinc-950 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-zinc-950 border border-white/20 max-w-2xl w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-6 relative">
             <div className="flex items-start justify-between border-b border-white/10 pb-4">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">
