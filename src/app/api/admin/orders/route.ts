@@ -3,10 +3,17 @@ import { checkAdminRequestAuth } from '@/lib/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  Pragma: 'no-cache',
+  Expires: '0',
+};
 
 export async function GET(request: NextRequest) {
   if (!checkAdminRequestAuth(request)) {
-    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401, headers: NO_CACHE_HEADERS });
   }
 
   try {
@@ -53,32 +60,35 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      orders: allOrders,
-      metrics: {
-        totalRevenue,
-        todayRevenue,
-        totalOrders: allOrders.length,
-        todayOrdersCount,
-        confirmedCount,
-        shippedCount,
-        deliveredCount,
-        pendingCount,
+    return NextResponse.json(
+      {
+        success: true,
+        orders: allOrders,
+        metrics: {
+          totalRevenue,
+          todayRevenue,
+          totalOrders: allOrders.length,
+          todayOrdersCount,
+          confirmedCount,
+          shippedCount,
+          deliveredCount,
+          pendingCount,
+        },
       },
-    });
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (error: any) {
     console.error('Error fetching admin orders:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to fetch orders.' },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }
 
 export async function PATCH(request: NextRequest) {
   if (!checkAdminRequestAuth(request)) {
-    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401, headers: NO_CACHE_HEADERS });
   }
 
   try {
@@ -88,7 +98,7 @@ export async function PATCH(request: NextRequest) {
     if (!orderId || !status) {
       return NextResponse.json(
         { success: false, error: 'orderId and status are required.' },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -96,7 +106,7 @@ export async function PATCH(request: NextRequest) {
     if (!allowedStatuses.includes(status)) {
       return NextResponse.json(
         { success: false, error: `Invalid status. Allowed: ${allowedStatuses.join(', ')}` },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -115,12 +125,12 @@ export async function PATCH(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ success: true, order: updated });
+    return NextResponse.json({ success: true, order: updated }, { headers: NO_CACHE_HEADERS });
   } catch (error: any) {
     console.error('Error updating admin order:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to update order status.' },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }

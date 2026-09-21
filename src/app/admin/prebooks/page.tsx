@@ -68,7 +68,13 @@ export default function AdminPrebooksPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/orders');
+      const res = await fetch(`/api/admin/orders?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      });
       if (res.status === 401) {
         router.push('/admin/login');
         return;
