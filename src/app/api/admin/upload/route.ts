@@ -46,6 +46,9 @@ export async function POST(request: NextRequest) {
     } catch {}
 
     const uploadedUrls: string[] = [];
+    const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || 'gnya078w';
+    const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
+    const sanityToken = process.env.SANITY_API_TOKEN;
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -58,28 +61,69 @@ export async function POST(request: NextRequest) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
-      const ext = path.extname(file.name) || '.png';
-      const cleanBaseName = path
-        .basename(file.name, ext)
-        .replace(/[^a-zA-Z0-9_-]/g, '_')
-        .toLowerCase();
-      const uniqueSuffix = `${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`;
-      const filename = `${cleanBaseName}-${uniqueSuffix}${ext}`;
+      let publicUrl: string | null = null;
 
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from(BUCKET)
-        .upload(filename, buffer, {
-          contentType: mimeType,
-          upsert: true,
-        });
+      // 1. Primary: Upload directly to Sanity Assets
+      if (sanityToken) {
+        try {
+          const cleanName = encodeURIComponent(file.name || `product-image-${Date.now()}.png`);
+          const sanityRes = await fetch(
+            `https://${projectId}.api.sanity.io/v2024-01-01/assets/images/${dataset}?filename=${cleanName}`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${sanityToken}`,
+                'Content-Type': mimeType,
+              },
+              body: buffer,
+            }
+          );
 
-      if (!uploadError) {
-        const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(filename);
-        if (urlData?.publicUrl) {
-          uploadedUrls.push(urlData.publicUrl);
+          if (sanityRes.ok) {
+            const sanityData = await sanityRes.json();
+            if (sanityData?.document?.url) {
+              publicUrl = sanityData.document.url;
+            }
+          } else {
+            const errData = await sanityRes.json().catch(() => ({}));
+            console.warn('Sanity asset upload returned error:', sanityRes.status, errData);
+          }
+        } catch (sanityErr) {
+          console.warn('Error during Sanity asset upload, falling back to Supabase:', sanityErr);
         }
-      } else {
-        console.error(`Error uploading file ${file.name}:`, uploadError);
+      }
+
+      // 2. Fallback: Upload to Supabase Storage if Sanity didn't provide a URL
+      if (!publicUrl) {
+        try {
+          const ext = path.extname(file.name) || '.png';
+          const cleanBaseName = path
+            .basename(file.name, ext)
+            .replace(/[^a-zA-Z0-9_-]/g, '_')
+            .toLowerCase();
+          const uniqueSuffix = `${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`;
+          const filename = `${cleanBaseName}-${uniqueSuffix}${ext}`;
+
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from(BUCKET)
+            .upload(filename, buffer, {
+              contentType: mimeType,
+              upsert: true,
+            });
+
+          if (!uploadError) {
+            const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(filename);
+            if (urlData?.publicUrl) {
+              publicUrl = urlData.publicUrl;
+            }
+          }
+        } catch (supaErr) {
+          console.error('Supabase upload error:', supaErr);
+        }
+      }
+
+      if (publicUrl) {
+        uploadedUrls.push(publicUrl);
       }
     }
 
