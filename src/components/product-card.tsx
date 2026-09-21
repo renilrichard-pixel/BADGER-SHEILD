@@ -36,6 +36,12 @@ function getImageUrl(source: SanityImageSource | null | undefined): string | nul
       return source;
     }
   }
+  if (typeof (source as any)?.url === 'string') {
+    return (source as any).url;
+  }
+  if (typeof (source as any)?.asset?.url === 'string') {
+    return (source as any).asset.url;
+  }
   try {
     return urlFor(source).width(500).height(667).fit('crop').auto('format').url();
   } catch {

@@ -59,6 +59,7 @@ export async function writeCloudJson<T>(filename: string, data: T): Promise<void
     const { error } = await supabase.storage.from(BUCKET).upload(filename, buffer, {
       contentType: 'application/json',
       upsert: true,
+      cacheControl: '0',
     });
 
     if (error) {

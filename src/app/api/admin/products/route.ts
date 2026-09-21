@@ -8,20 +8,27 @@ import {
 } from '@/lib/adminProducts';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  Pragma: 'no-cache',
+  Expires: '0',
+};
 
 export async function GET(request: NextRequest) {
   if (!checkAdminRequestAuth(request)) {
-    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401, headers: NO_CACHE_HEADERS });
   }
 
   try {
     const products = await getAllAdminProducts();
-    return NextResponse.json({ success: true, products });
+    return NextResponse.json({ success: true, products }, { headers: NO_CACHE_HEADERS });
   } catch (error: any) {
     console.error('Error fetching admin products:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to fetch products' },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }
@@ -75,19 +82,19 @@ export async function PATCH(request: NextRequest) {
           : undefined,
     });
 
-    return NextResponse.json({ success: true, product: updated });
+    return NextResponse.json({ success: true, product: updated }, { headers: NO_CACHE_HEADERS });
   } catch (error: any) {
     console.error('Error updating product:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to update product' },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }
 
 export async function DELETE(request: NextRequest) {
   if (!checkAdminRequestAuth(request)) {
-    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401, headers: NO_CACHE_HEADERS });
   }
 
   try {
@@ -99,23 +106,23 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (!productId) {
-      return NextResponse.json({ success: false, error: 'productId is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'productId is required.' }, { status: 400, headers: NO_CACHE_HEADERS });
     }
 
     await deleteAdminProduct(productId);
-    return NextResponse.json({ success: true, message: 'Product deleted successfully.' });
+    return NextResponse.json({ success: true, message: 'Product deleted successfully.' }, { headers: NO_CACHE_HEADERS });
   } catch (error: any) {
     console.error('Error deleting product:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to delete product' },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }
 
 export async function POST(request: NextRequest) {
   if (!checkAdminRequestAuth(request)) {
-    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401, headers: NO_CACHE_HEADERS });
   }
 
   try {
@@ -138,7 +145,7 @@ export async function POST(request: NextRequest) {
     if (!name || !price) {
       return NextResponse.json(
         { success: false, error: 'Product name and price are required.' },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -157,12 +164,12 @@ export async function POST(request: NextRequest) {
       prebookAdvanceAmount: prebookAdvanceAmount ? Number(prebookAdvanceAmount) : undefined,
     });
 
-    return NextResponse.json({ success: true, product: newProduct });
+    return NextResponse.json({ success: true, product: newProduct }, { headers: NO_CACHE_HEADERS });
   } catch (error: any) {
     console.error('Error creating product:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to create product' },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }

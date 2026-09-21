@@ -202,9 +202,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   if (!productData || productData.categorySlug === 'joggers') notFound();
 
-  // Combine single 'image' (if set) and the 'images' gallery with deduplication
+  // Combine single 'image', 'imageUrl' (if set) and the 'images' gallery with deduplication
   const rawList = [
     ...(productData.image ? [productData.image] : []),
+    ...((productData as any).imageUrl ? [(productData as any).imageUrl] : []),
     ...(Array.isArray(productData.images) ? productData.images : []),
   ];
 
@@ -212,8 +213,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   for (const item of rawList) {
     let url = '';
     if (typeof item === 'string') {
-      url = item;
-    } else if (item) {
+      url = item.trim();
+    } else if (typeof item?.url === 'string') {
+      url = item.url.trim();
+    } else if (typeof item?.asset?.url === 'string') {
+      url = item.asset.url.trim();
+    } else if (item?.asset?._ref) {
       try {
         url = urlForImage(item);
       } catch {}

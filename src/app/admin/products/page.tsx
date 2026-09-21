@@ -108,7 +108,13 @@ export default function AdminProductsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/products');
+      const res = await fetch(`/api/admin/products?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      });
       if (res.status === 401) {
         router.push('/admin/login');
         return;
@@ -140,19 +146,25 @@ export default function AdminProductsPage() {
     const collectedImages: string[] = [];
     const extractUrl = (img: any) => {
       if (!img) return;
+      let clean: string | null = null;
       if (typeof img === 'string') {
-        if (!collectedImages.includes(img)) collectedImages.push(img);
-        return;
-      }
-      if (img?.asset?._ref) {
+        clean = img.trim();
+      } else if (typeof img?.url === 'string') {
+        clean = img.url.trim();
+      } else if (typeof img?.asset?.url === 'string') {
+        clean = img.asset.url.trim();
+      } else if (img?.asset?._ref) {
         try {
-          const url = urlForImage(img);
-          if (url && !collectedImages.includes(url)) collectedImages.push(url);
+          clean = urlForImage(img);
         } catch {}
+      }
+      if (clean && !collectedImages.includes(clean)) {
+        collectedImages.push(clean);
       }
     };
 
     if (p.image) extractUrl(p.image);
+    if ((p as any).imageUrl) extractUrl((p as any).imageUrl);
     if (Array.isArray(p.images)) {
       p.images.forEach(extractUrl);
     }
@@ -486,17 +498,21 @@ export default function AdminProductsPage() {
 
   const resolveImage = (p: Product) => {
     if (typeof p.image === 'string') return p.image;
-    if (Array.isArray(p.images) && typeof p.images[0] === 'string') return p.images[0];
+    if (typeof (p as any).imageUrl === 'string') return (p as any).imageUrl;
+    if (Array.isArray(p.images) && p.images.length > 0) {
+      const first = p.images[0];
+      if (typeof first === 'string') return first;
+      if (typeof first?.url === 'string') return first.url;
+      if (typeof first?.asset?.url === 'string') return first.asset.url;
+      if (first?.asset?._ref) {
+        try {
+          return urlForImage(first);
+        } catch {}
+      }
+    }
     if (p.image?.asset?._ref) {
       try {
         return urlForImage(p.image);
-      } catch {
-        return null;
-      }
-    }
-    if (Array.isArray(p.images) && p.images[0]?.asset?._ref) {
-      try {
-        return urlForImage(p.images[0]);
       } catch {
         return null;
       }
