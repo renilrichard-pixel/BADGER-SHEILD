@@ -40,6 +40,7 @@ export async function PATCH(request: NextRequest) {
       categoryName,
       description,
       imageUrl,
+      images,
       sizes,
       price,
       salePrice,
@@ -59,6 +60,7 @@ export async function PATCH(request: NextRequest) {
       categoryName,
       description,
       imageUrl,
+      images,
       sizes,
       price: price !== undefined ? Number(price) : undefined,
       salePrice: salePrice !== undefined ? (salePrice ? Number(salePrice) : undefined) : undefined,
@@ -118,7 +120,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, categorySlug, categoryName, price, salePrice, description, imageUrl, sizes, sizeStock, isPrebook, prebookAdvanceAmount } = body;
+    const {
+      name,
+      categorySlug,
+      categoryName,
+      price,
+      salePrice,
+      description,
+      imageUrl,
+      images,
+      sizes,
+      sizeStock,
+      isPrebook,
+      prebookAdvanceAmount,
+    } = body;
 
     if (!name || !price) {
       return NextResponse.json(
@@ -135,6 +150,7 @@ export async function POST(request: NextRequest) {
       salePrice: salePrice ? Number(salePrice) : undefined,
       description,
       imageUrl,
+      images,
       sizes: sizes || ['S', 'M', 'L', 'XL'],
       sizeStock: sizeStock || [],
       isPrebook: isPrebook !== undefined ? Boolean(isPrebook) : false,

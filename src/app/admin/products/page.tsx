@@ -69,7 +69,7 @@ export default function AdminProductsPage() {
   const [editName, setEditName] = useState<string>('');
   const [editCategory, setEditCategory] = useState<string>('t-shirts');
   const [editDescription, setEditDescription] = useState<string>('');
-  const [editImageUrl, setEditImageUrl] = useState<string>('');
+  const [editImages, setEditImages] = useState<string[]>([]);
   const [editPrice, setEditPrice] = useState<number>(0);
   const [editSalePrice, setEditSalePrice] = useState<string>('');
   const [editSizeStock, setEditSizeStock] = useState<Record<string, number>>({});
@@ -89,7 +89,7 @@ export default function AdminProductsPage() {
   const [addPrice, setAddPrice] = useState('');
   const [addSalePrice, setAddSalePrice] = useState('');
   const [addDescription, setAddDescription] = useState('');
-  const [addImageUrl, setAddImageUrl] = useState('');
+  const [addImages, setAddImages] = useState<string[]>([]);
   const [addIsPrebook, setAddIsPrebook] = useState<boolean>(false);
   const [addPrebookAdvance, setAddPrebookAdvance] = useState<string>('');
   const [addSizeType, setAddSizeType] = useState<'apparel' | 'os'>('apparel');
@@ -135,7 +135,29 @@ export default function AdminProductsPage() {
     const catSlug = p.categorySlug || 't-shirts';
     setEditCategory(catSlug);
     setEditDescription(p.description || '');
-    setEditImageUrl(resolveImage(p) || '');
+
+    // Extract all images into editImages array with deduplication
+    const collectedImages: string[] = [];
+    const extractUrl = (img: any) => {
+      if (!img) return;
+      if (typeof img === 'string') {
+        if (!collectedImages.includes(img)) collectedImages.push(img);
+        return;
+      }
+      if (img?.asset?._ref) {
+        try {
+          const url = urlForImage(img);
+          if (url && !collectedImages.includes(url)) collectedImages.push(url);
+        } catch {}
+      }
+    };
+
+    if (p.image) extractUrl(p.image);
+    if (Array.isArray(p.images)) {
+      p.images.forEach(extractUrl);
+    }
+    setEditImages(collectedImages);
+
     setEditPrice(p.price);
     setEditSalePrice(p.salePrice ? String(p.salePrice) : '');
     setEditIsPrebook(p.isPrebook ?? false);
@@ -205,7 +227,8 @@ export default function AdminProductsPage() {
           categorySlug: editCategory,
           categoryName: catObj?.name || editCategory,
           description: editDescription.trim(),
-          imageUrl: editImageUrl || undefined,
+          imageUrl: editImages[0] || undefined,
+          images: editImages,
           sizes: sizesArray,
           price: Number(editPrice),
           salePrice: editSalePrice ? Number(editSalePrice) : undefined,
@@ -262,14 +285,40 @@ export default function AdminProductsPage() {
     }
   };
 
+  const setAsCoverEdit = (index: number) => {
+    setEditImages((prev) => {
+      const item = prev[index];
+      const rest = prev.filter((_, i) => i !== index);
+      return [item, ...rest];
+    });
+  };
+
+  const removeEditImage = (index: number) => {
+    setEditImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const setAsCoverAdd = (index: number) => {
+    setAddImages((prev) => {
+      const item = prev[index];
+      const rest = prev.filter((_, i) => i !== index);
+      return [item, ...rest];
+    });
+  };
+
+  const removeAddImage = (index: number) => {
+    setAddImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
     setUploadingEditImage(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      for (let i = 0; i < fileList.length; i++) {
+        formData.append('files', fileList[i]);
+      }
 
       const res = await fetch('/api/admin/upload', {
         method: 'POST',
@@ -282,22 +331,30 @@ export default function AdminProductsPage() {
         return;
       }
 
-      setEditImageUrl(data.url);
+      const newUrls: string[] = Array.isArray(data.urls)
+        ? data.urls
+        : data.url
+        ? [data.url]
+        : [];
+      setEditImages((prev) => [...prev, ...newUrls]);
     } catch (err: any) {
       alert(err?.message || 'Upload failed.');
     } finally {
       setUploadingEditImage(false);
+      e.target.value = '';
     }
   };
 
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      for (let i = 0; i < fileList.length; i++) {
+        formData.append('files', fileList[i]);
+      }
 
       const res = await fetch('/api/admin/upload', {
         method: 'POST',
@@ -310,11 +367,17 @@ export default function AdminProductsPage() {
         return;
       }
 
-      setAddImageUrl(data.url);
+      const newUrls: string[] = Array.isArray(data.urls)
+        ? data.urls
+        : data.url
+        ? [data.url]
+        : [];
+      setAddImages((prev) => [...prev, ...newUrls]);
     } catch (err: any) {
       alert(err?.message || 'Upload failed.');
     } finally {
       setUploadingImage(false);
+      e.target.value = '';
     }
   };
 
@@ -377,7 +440,8 @@ export default function AdminProductsPage() {
           price: Number(addPrice),
           salePrice: addSalePrice ? Number(addSalePrice) : undefined,
           description: addDescription.trim(),
-          imageUrl: addImageUrl || undefined,
+          imageUrl: addImages[0] || undefined,
+          images: addImages,
           sizes: sizesArray,
           sizeStock: sizeStockArray,
           isPrebook: addIsPrebook,
@@ -401,7 +465,7 @@ export default function AdminProductsPage() {
       setAddPrice('');
       setAddSalePrice('');
       setAddDescription('');
-      setAddImageUrl('');
+      setAddImages([]);
       setAddIsPrebook(false);
       setAddPrebookAdvance('');
       setAddSizeType('apparel');
@@ -422,6 +486,7 @@ export default function AdminProductsPage() {
 
   const resolveImage = (p: Product) => {
     if (typeof p.image === 'string') return p.image;
+    if (Array.isArray(p.images) && typeof p.images[0] === 'string') return p.images[0];
     if (p.image?.asset?._ref) {
       try {
         return urlForImage(p.image);
@@ -776,29 +841,23 @@ export default function AdminProductsPage() {
                 />
               </div>
 
-              {/* Product Image */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
-                  Product Image
-                </label>
-                <div className="flex items-center gap-4">
-                  {editImageUrl && (
-                    <div className="w-14 h-18 bg-zinc-900 border border-white/20 relative overflow-hidden shrink-0">
-                      <Image
-                        src={editImageUrl}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <label className="flex-1 border-2 border-dashed border-white/20 hover:border-white/40 p-4 text-center cursor-pointer transition-colors">
-                    <UploadCloud className="w-5 h-5 mx-auto text-zinc-400 mb-1" />
-                    <span className="text-xs text-zinc-300 block">
-                      {uploadingEditImage ? 'Uploading image…' : 'Click to replace product image (JPG, PNG, WEBP)'}
-                    </span>
+              {/* Product Photos Gallery */}
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+                      Product Photos ({editImages.length})
+                    </label>
+                    <p className="text-[10px] text-zinc-500">
+                      First photo is the cover. Hover on store will show the 2nd photo.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white text-black text-[10px] font-bold uppercase tracking-wider hover:bg-zinc-200 cursor-pointer transition-colors">
+                    <Plus className="w-3 h-3" />
+                    <span>{uploadingEditImage ? 'Uploading…' : 'Add Photos'}</span>
                     <input
                       type="file"
+                      multiple
                       accept="image/*"
                       onChange={handleEditImageUpload}
                       disabled={uploadingEditImage}
@@ -806,6 +865,88 @@ export default function AdminProductsPage() {
                     />
                   </label>
                 </div>
+
+                {editImages.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                    {editImages.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className={`group relative aspect-3/4 bg-zinc-900 border overflow-hidden ${
+                          idx === 0 ? 'border-amber-400/80 ring-1 ring-amber-400/50' : 'border-white/15'
+                        }`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`Product photo ${idx + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1">
+                          {idx === 0 ? (
+                            <span className="bg-amber-400 text-black text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 shadow-sm">
+                              ★ Cover
+                            </span>
+                          ) : (
+                            <span className="bg-black/70 backdrop-blur-sm text-zinc-300 text-[9px] font-mono px-1.5 py-0.5">
+                              #{idx + 1}
+                            </span>
+                          )}
+                        </div>
+                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2 z-20">
+                          {idx !== 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setAsCoverEdit(idx)}
+                              className="w-full py-1 bg-white text-black text-[9px] font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors"
+                            >
+                              Set as Cover
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeEditImage(idx)}
+                            className="w-full py-1 bg-red-950/80 border border-red-800/60 text-red-300 text-[9px] font-bold uppercase tracking-wider hover:bg-red-900 hover:text-white transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <label className="aspect-3/4 border-2 border-dashed border-white/20 hover:border-white/40 flex flex-col items-center justify-center p-2 text-center cursor-pointer transition-colors bg-zinc-900/40">
+                      <UploadCloud className="w-5 h-5 text-zinc-400 mb-1" />
+                      <span className="text-[10px] text-zinc-300 font-bold block">
+                        {uploadingEditImage ? 'Uploading…' : '+ Add More'}
+                      </span>
+                      <span className="text-[9px] text-zinc-500 block">PNG, JPG, WEBP</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleEditImageUpload}
+                        disabled={uploadingEditImage}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="border-2 border-dashed border-white/20 hover:border-white/40 p-6 text-center cursor-pointer transition-colors block bg-zinc-900/30">
+                    <UploadCloud className="w-6 h-6 mx-auto text-zinc-400 mb-1.5" />
+                    <span className="text-xs text-zinc-200 font-bold block">
+                      {uploadingEditImage ? 'Uploading images…' : 'Click to upload product photos'}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 mt-1 block">
+                      Select multiple photos at once. Supported: JPG, PNG, WEBP, AVIF.
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleEditImageUpload}
+                      disabled={uploadingEditImage}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
 
               {/* Size System & Inventory */}
@@ -1050,29 +1191,23 @@ export default function AdminProductsPage() {
                 />
               </div>
 
-              {/* Image Upload */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
-                  Product Image
-                </label>
-                <div className="flex items-center gap-4">
-                  {addImageUrl && (
-                    <div className="w-14 h-18 bg-zinc-900 border border-white/20 relative overflow-hidden shrink-0">
-                      <Image
-                        src={addImageUrl}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <label className="flex-1 border-2 border-dashed border-white/20 hover:border-white/40 p-4 text-center cursor-pointer transition-colors">
-                    <UploadCloud className="w-5 h-5 mx-auto text-zinc-400 mb-1" />
-                    <span className="text-xs text-zinc-300 block">
-                      {uploadingImage ? 'Uploading image…' : 'Click to choose image file (JPG, PNG, WEBP)'}
-                    </span>
+              {/* Product Photos Gallery */}
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+                      Product Photos ({addImages.length})
+                    </label>
+                    <p className="text-[10px] text-zinc-500">
+                      First photo is the cover. Hover on store will show the 2nd photo.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white text-black text-[10px] font-bold uppercase tracking-wider hover:bg-zinc-200 cursor-pointer transition-colors">
+                    <Plus className="w-3 h-3" />
+                    <span>{uploadingImage ? 'Uploading…' : 'Add Photos'}</span>
                     <input
                       type="file"
+                      multiple
                       accept="image/*"
                       onChange={handleImageFileUpload}
                       disabled={uploadingImage}
@@ -1080,6 +1215,88 @@ export default function AdminProductsPage() {
                     />
                   </label>
                 </div>
+
+                {addImages.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                    {addImages.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className={`group relative aspect-3/4 bg-zinc-900 border overflow-hidden ${
+                          idx === 0 ? 'border-amber-400/80 ring-1 ring-amber-400/50' : 'border-white/15'
+                        }`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`Product photo ${idx + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1">
+                          {idx === 0 ? (
+                            <span className="bg-amber-400 text-black text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 shadow-sm">
+                              ★ Cover
+                            </span>
+                          ) : (
+                            <span className="bg-black/70 backdrop-blur-sm text-zinc-300 text-[9px] font-mono px-1.5 py-0.5">
+                              #{idx + 1}
+                            </span>
+                          )}
+                        </div>
+                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2 z-20">
+                          {idx !== 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setAsCoverAdd(idx)}
+                              className="w-full py-1 bg-white text-black text-[9px] font-bold uppercase tracking-wider hover:bg-zinc-200 transition-colors"
+                            >
+                              Set as Cover
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeAddImage(idx)}
+                            className="w-full py-1 bg-red-950/80 border border-red-800/60 text-red-300 text-[9px] font-bold uppercase tracking-wider hover:bg-red-900 hover:text-white transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <label className="aspect-3/4 border-2 border-dashed border-white/20 hover:border-white/40 flex flex-col items-center justify-center p-2 text-center cursor-pointer transition-colors bg-zinc-900/40">
+                      <UploadCloud className="w-5 h-5 text-zinc-400 mb-1" />
+                      <span className="text-[10px] text-zinc-300 font-bold block">
+                        {uploadingImage ? 'Uploading…' : '+ Add More'}
+                      </span>
+                      <span className="text-[9px] text-zinc-500 block">PNG, JPG, WEBP</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageFileUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="border-2 border-dashed border-white/20 hover:border-white/40 p-6 text-center cursor-pointer transition-colors block bg-zinc-900/30">
+                    <UploadCloud className="w-6 h-6 mx-auto text-zinc-400 mb-1.5" />
+                    <span className="text-xs text-zinc-200 font-bold block">
+                      {uploadingImage ? 'Uploading images…' : 'Click to upload product photos'}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 mt-1 block">
+                      Select multiple photos at once. Supported: JPG, PNG, WEBP, AVIF.
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleImageFileUpload}
+                      disabled={uploadingImage}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
 
               {/* Sizing Mode & Inventory */}

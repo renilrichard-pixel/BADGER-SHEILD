@@ -31,6 +31,11 @@ interface ProductCardProps {
 
 function getImageUrl(source: SanityImageSource | null | undefined): string | null {
   if (!source) return null;
+  if (typeof source === 'string') {
+    if (source.startsWith('http://') || source.startsWith('https://') || source.startsWith('/')) {
+      return source;
+    }
+  }
   try {
     return urlFor(source).width(500).height(667).fit('crop').auto('format').url();
   } catch {

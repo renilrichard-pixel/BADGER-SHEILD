@@ -14,31 +14,30 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-
-    if (!file) {
-      return NextResponse.json({ success: false, error: 'No file uploaded.' }, { status: 400 });
+    
+    // Gather all files uploaded (supports 'files', 'file', or any File field in form data)
+    let files: File[] = [];
+    const filesList = formData.getAll('files');
+    if (filesList.length > 0) {
+      files = filesList.filter((f): f is File => f instanceof File && f.size > 0);
+    }
+    const singleFile = formData.get('file');
+    if (singleFile instanceof File && singleFile.size > 0 && !files.includes(singleFile)) {
+      files.push(singleFile);
+    }
+    if (files.length === 0) {
+      for (const value of formData.values()) {
+        if (value instanceof File && value.size > 0 && !files.includes(value)) {
+          files.push(value);
+        }
+      }
     }
 
-    const mimeType = file.type;
+    if (files.length === 0) {
+      return NextResponse.json({ success: false, error: 'No files uploaded.' }, { status: 400 });
+    }
+
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
-    if (!allowedTypes.includes(mimeType)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid file type. Please upload a JPG, PNG, or WEBP image.' },
-        { status: 400 }
-      );
-    }
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    const ext = path.extname(file.name) || '.png';
-    const cleanBaseName = path
-      .basename(file.name, ext)
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .toLowerCase();
-    const filename = `${cleanBaseName}-${Date.now()}${ext}`;
-
     const supabaseAdmin = getSupabaseAdmin();
 
     // Ensure public bucket exists
@@ -46,25 +45,57 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin.storage.createBucket(BUCKET, { public: true });
     } catch {}
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .upload(filename, buffer, {
-        contentType: mimeType,
-        upsert: true,
-      });
+    const uploadedUrls: string[] = [];
 
-    if (uploadError) {
-      console.error('Supabase storage upload error:', uploadError);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const mimeType = file.type;
+
+      if (!allowedTypes.includes(mimeType)) {
+        continue; // Skip invalid formats
+      }
+
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const ext = path.extname(file.name) || '.png';
+      const cleanBaseName = path
+        .basename(file.name, ext)
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .toLowerCase();
+      const uniqueSuffix = `${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`;
+      const filename = `${cleanBaseName}-${uniqueSuffix}${ext}`;
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .upload(filename, buffer, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (!uploadError) {
+        const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(filename);
+        if (urlData?.publicUrl) {
+          uploadedUrls.push(urlData.publicUrl);
+        }
+      } else {
+        console.error(`Error uploading file ${file.name}:`, uploadError);
+      }
+    }
+
+    if (uploadedUrls.length === 0) {
       return NextResponse.json(
-        { success: false, error: `Upload error: ${uploadError.message}` },
-        { status: 500 }
+        { success: false, error: 'No valid images could be uploaded. Ensure JPG, PNG, or WEBP.' },
+        { status: 400 }
       );
     }
 
-    const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(filename);
-    const publicUrl = urlData.publicUrl;
-
-    return NextResponse.json({ success: true, url: publicUrl, filename });
+    return NextResponse.json({
+      success: true,
+      url: uploadedUrls[0],
+      urls: uploadedUrls,
+      count: uploadedUrls.length,
+    });
   } catch (error: any) {
     console.error('File upload error:', error);
     return NextResponse.json(

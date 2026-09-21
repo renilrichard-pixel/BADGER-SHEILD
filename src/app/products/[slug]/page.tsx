@@ -149,16 +149,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const descriptionText = cleanDescription(product.description);
   
   // Resolve primary image absolute URL
-  let imageUrl = '';
-  if (product.image) {
+  const resolveItemUrl = (img: any): string => {
+    if (!img) return '';
+    if (typeof img === 'string') return img;
     try {
-      imageUrl = urlForImage(product.image);
-    } catch {}
-  } else if (product.images && product.images.length > 0) {
-    try {
-      imageUrl = urlForImage(product.images[0]);
-    } catch {}
-  }
+      return urlForImage(img);
+    } catch {
+      return '';
+    }
+  };
+
+  const imageUrl =
+    resolveItemUrl(product.image) ||
+    (Array.isArray(product.images) && product.images[0]
+      ? resolveItemUrl(product.images[0])
+      : '');
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-domain.com';
   const canonicalUrl = `${siteUrl}/products/${slug}`;
@@ -197,19 +202,25 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   if (!productData || productData.categorySlug === 'joggers') notFound();
 
-  // Combine single 'image' (if set) and the 'images' gallery
+  // Combine single 'image' (if set) and the 'images' gallery with deduplication
+  const rawList = [
+    ...(productData.image ? [productData.image] : []),
+    ...(Array.isArray(productData.images) ? productData.images : []),
+  ];
+
   const resolvedImages: string[] = [];
-  if (productData.image) {
-    try {
-      resolvedImages.push(urlForImage(productData.image));
-    } catch {}
-  }
-  if (productData.images && Array.isArray(productData.images)) {
-    productData.images.forEach((img) => {
+  for (const item of rawList) {
+    let url = '';
+    if (typeof item === 'string') {
+      url = item;
+    } else if (item) {
       try {
-        resolvedImages.push(urlForImage(img));
+        url = urlForImage(item);
       } catch {}
-    });
+    }
+    if (url && !resolvedImages.includes(url)) {
+      resolvedImages.push(url);
+    }
   }
 
   // Fetch the product review aggregate from database aggregation layer (cached)

@@ -158,6 +158,7 @@ export async function updateAdminProduct(
     categoryName?: string;
     description?: string;
     imageUrl?: string;
+    images?: string[];
     sizes?: string[];
     price?: number;
     salePrice?: number;
@@ -175,7 +176,10 @@ export async function updateAdminProduct(
     ...updates,
   };
 
-  if (updates.imageUrl) {
+  if (updates.images && Array.isArray(updates.images)) {
+    cleanUpdates.images = updates.images;
+    cleanUpdates.image = updates.images[0] || updates.imageUrl || undefined;
+  } else if (updates.imageUrl) {
     cleanUpdates.image = updates.imageUrl;
     cleanUpdates.images = [updates.imageUrl];
   }
@@ -220,6 +224,7 @@ export async function updateAdminProduct(
     }
   }
 
+  // Invalidate in-memory and return updated product
   const all = await getAllAdminProducts();
   return all.find((p) => p._id === productId) || null;
 }
@@ -268,6 +273,7 @@ export async function createAdminProduct(data: {
   salePrice?: number;
   description?: string;
   imageUrl?: string;
+  images?: string[];
   sizes: string[];
   sizeStock: SizeStockEntry[];
   isPrebook?: boolean;
@@ -281,6 +287,13 @@ export async function createAdminProduct(data: {
   const uniqueId = `prod-custom-${Date.now()}`;
   const totalStock = data.sizeStock.reduce((acc, row) => acc + (row.quantity || 0), 0);
 
+  const imagesList =
+    Array.isArray(data.images) && data.images.length > 0
+      ? data.images
+      : data.imageUrl
+      ? [data.imageUrl]
+      : [];
+
   const newProduct: AdminProduct = {
     _id: uniqueId,
     name: data.name,
@@ -290,8 +303,8 @@ export async function createAdminProduct(data: {
     salePrice: data.salePrice || undefined,
     categorySlug: data.categorySlug,
     categoryName: data.categoryName,
-    image: data.imageUrl || undefined,
-    images: data.imageUrl ? [data.imageUrl] : [],
+    image: imagesList[0] || undefined,
+    images: imagesList,
     sizes: data.sizes,
     sizeStock: data.sizeStock,
     stockQty: totalStock,
