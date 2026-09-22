@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import {
   Minus, Plus, ShoppingBag, Heart, Ruler,
   ChevronDown, ChevronUp, Star, Shield,
   RotateCcw, Truck, Package, Check, ZoomIn,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useCart } from '@/lib/hooks/use-cart';
 import { toast } from 'sonner';
@@ -98,6 +99,12 @@ export default function ProductClient({ product }: { product: Product }) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const [sizeError, setSizeError] = useState(false);
+
+  // Drag / swipe state
+  const dragStartX = useRef<number | null>(null);
+  const dragStartY = useRef<number | null>(null);
+  const isDragging = useRef(false);
+  const dragThreshold = 50; // px needed to trigger slide change
 
   const [user, setUser] = useState<any>(null);
   const [ratingInput, setRatingInput] = useState(5);
@@ -258,6 +265,53 @@ export default function ProductClient({ product }: { product: Product }) {
   };
 
   const images = product.images || [];
+
+  const goToPrev = useCallback(() => {
+    setActiveImageIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const goToNext = useCallback(() => {
+    setActiveImageIndex(prev => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
+  // ─── Drag/Touch Handlers ───────────────────────────────────────────────────
+  const handleDragStart = (clientX: number, clientY: number) => {
+    if (isZoomed) return;
+    dragStartX.current = clientX;
+    dragStartY.current = clientY;
+    isDragging.current = false;
+  };
+
+  const handleDragEnd = (clientX: number, clientY: number) => {
+    if (dragStartX.current === null || dragStartY.current === null) return;
+    const dx = clientX - dragStartX.current;
+    const dy = clientY - (dragStartY.current ?? 0);
+    // Only trigger if horizontal drag is dominant and exceeds threshold
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > dragThreshold && images.length > 1) {
+      isDragging.current = true;
+      if (dx < 0) goToNext(); else goToPrev();
+    }
+    dragStartX.current = null;
+    dragStartY.current = null;
+  };
+
+  // Mouse
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => handleDragStart(e.clientX, e.clientY);
+  const onMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    handleDragEnd(e.clientX, e.clientY);
+  };
+  const handleMainImageClick = () => {
+    if (!isDragging.current) setIsZoomed(z => !z);
+    isDragging.current = false;
+  };
+
+  // Touch
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  };
+  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    handleDragEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  };
   const stock = getSizeStockQuantity(product.sizeStock, selectedSize, product.stock ?? 0);
   const totalStock = getTotalStock(product.sizeStock, product.stock ?? 0);
   const isLowStock = stock > 0 && stock <= 5;
@@ -304,12 +358,17 @@ export default function ProductClient({ product }: { product: Product }) {
 
           {/* ── Image Gallery (5 cols on md/lg, more compact) ── */}
           <div className="md:col-span-5 space-y-3 w-full">
+            {/* Main image with drag/swipe + zoom */}
             <div
-              className={`relative bg-muted overflow-hidden ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+              className={`relative bg-muted overflow-hidden select-none ${isZoomed ? 'cursor-zoom-out' : 'cursor-grab active:cursor-grabbing'}`}
               style={{ aspectRatio: '3/4' }}
-              onClick={() => setIsZoomed(!isZoomed)}
+              onMouseDown={onMouseDown}
+              onMouseUp={onMouseUp}
+              onClick={handleMainImageClick}
               onMouseMove={handleImageMouseMove}
-              onMouseLeave={() => setIsZoomed(false)}
+              onMouseLeave={() => { setIsZoomed(false); dragStartX.current = null; }}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
             >
               {images[activeImageIndex] ? (
                 <Image
@@ -317,15 +376,38 @@ export default function ProductClient({ product }: { product: Product }) {
                   alt={product.name || ''}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 40vw, 420px"
-                  className="w-full h-full object-cover transition-transform duration-700"
+                  className="w-full h-full object-cover transition-all duration-500"
                   style={isZoomed ? { transform: 'scale(2)', transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` } : {}}
                   priority
                   quality={85}
+                  draggable={false}
                 />
               ) : (
                 <div className="w-full h-full bg-muted flex items-center justify-center">
                   <Package className="w-16 h-16 text-muted-foreground/30" />
                 </div>
+              )}
+
+              {/* Prev / Next arrows — only when multiple images and not zoomed */}
+              {images.length > 1 && !isZoomed && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous image"
+                    onClick={e => { e.stopPropagation(); goToPrev(); }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-background/70 backdrop-blur-sm hover:bg-background/90 transition-colors rounded-none shadow"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next image"
+                    onClick={e => { e.stopPropagation(); goToNext(); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-background/70 backdrop-blur-sm hover:bg-background/90 transition-colors rounded-none shadow"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
               )}
 
               {/* Status Badge overlay (ONLY out of stock) */}
@@ -346,18 +428,39 @@ export default function ProductClient({ product }: { product: Product }) {
                   {activeImageIndex + 1} / {images.length}
                 </div>
               )}
+
+              {/* Dot indicators */}
+              {images.length > 1 && !isZoomed && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                  {images.map((_: string, idx: number) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      aria-label={`Go to image ${idx + 1}`}
+                      onClick={e => { e.stopPropagation(); setActiveImageIndex(idx); }}
+                      className={`rounded-full transition-all duration-300 ${
+                        activeImageIndex === idx
+                          ? 'w-4 h-1.5 bg-foreground'
+                          : 'w-1.5 h-1.5 bg-foreground/40 hover:bg-foreground/70'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* Thumbnail strip */}
             {images.length > 1 && (
               <div className="grid grid-cols-5 gap-2">
                 {images.map((img: string, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`aspect-square bg-muted overflow-hidden border transition-all relative ${activeImageIndex === idx
+                    className={`aspect-square bg-muted overflow-hidden border transition-all relative ${
+                      activeImageIndex === idx
                         ? 'border-foreground'
                         : 'border-transparent opacity-50 hover:opacity-80'
-                      }`}
+                    }`}
                   >
                     <Image
                       src={img}
