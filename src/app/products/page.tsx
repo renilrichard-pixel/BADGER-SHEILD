@@ -91,8 +91,17 @@ export default async function ProductsPage({
     getCustomProducts(),
   ]);
 
+  // Set of slugs that custom products cover — Sanity products with same slug should be hidden
+  const customSlugs = new Set(
+    customList
+      .filter((c) => !overrides[c._id]?.deleted && c.active !== false && overrides[c._id]?.active !== false)
+      .map((c) => c.slug)
+  );
+
   const merged = (rawProducts || [])
     .filter((p) => !overrides[p._id]?.deleted && overrides[p._id]?.active !== false)
+    // Exclude Sanity products whose slug is covered by a custom product
+    .filter((p) => !customSlugs.has(p.slug?.current || ''))
     .map((p) => {
       const o = overrides[p._id];
       if (!o) return p;
@@ -142,6 +151,7 @@ export default async function ProductsPage({
     });
 
   const products: SanityProduct[] = [...matchingCustom, ...merged];
+
 
   const renderProductCard = (product: SanityProduct) => {
     const agg = aggregates[product._id];

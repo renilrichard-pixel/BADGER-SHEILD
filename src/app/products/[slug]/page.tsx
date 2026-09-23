@@ -39,7 +39,68 @@ export const revalidate = 0;
 
 // React cache wrapper to deduplicate calls to getProduct during render lifecycle
 const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
-  let product = await client.fetch<ProductData | null>(`
+  // ── 1. Custom products take priority over Sanity ─────────────────────────
+  const [customList, overrides] = await Promise.all([
+    getCustomProducts(),
+    getProductOverrides(),
+  ]);
+
+  const custom = customList.find((c) => c.slug === slug);
+
+  let product: ProductData | null = null;
+
+  if (custom) {
+    // Check this custom product isn't deleted/inactive via overrides
+    const co = overrides[custom._id];
+    if (co?.deleted || co?.active === false) {
+      // fall through to Sanity
+    } else {
+      product = {
+        _id: custom._id,
+        name: custom.name,
+        slug: { current: custom.slug },
+        description: custom.description,
+        price: custom.price,
+        salePrice: custom.salePrice,
+        stock: custom.stockQty,
+        sizeStock: custom.sizeStock,
+        sizes: custom.sizes,
+        image: custom.image as any,
+        images: custom.images as any,
+        categorySlug: custom.categorySlug,
+        categoryName: custom.categoryName,
+        rating: 5,
+        isPrebook: custom.isPrebook,
+        prebookAdvanceAmount: custom.prebookAdvanceAmount,
+      };
+
+      // Apply any override on top
+      if (co) {
+        product = {
+          ...product,
+          name: co.name || product.name,
+          description: co.description || product.description,
+          categorySlug: co.categorySlug || product.categorySlug,
+          categoryName: co.categoryName || product.categoryName,
+          image: (co.image || product.image) as any,
+          images: (co.images || product.images) as any,
+          sizes: co.sizes || product.sizes,
+          price: co.price !== undefined ? co.price : product.price,
+          salePrice: co.salePrice !== undefined ? co.salePrice : product.salePrice,
+          stock: co.stockQty !== undefined ? co.stockQty : product.stock,
+          sizeStock: co.sizeStock !== undefined ? co.sizeStock : product.sizeStock,
+          isPrebook: co.isPrebook !== undefined ? co.isPrebook : product.isPrebook,
+          prebookAdvanceAmount:
+            co.prebookAdvanceAmount !== undefined ? co.prebookAdvanceAmount : product.prebookAdvanceAmount,
+        };
+      }
+
+      return product;
+    }
+  }
+
+  // ── 2. Fallback: Sanity product ───────────────────────────────────────────
+  product = await client.fetch<ProductData | null>(`
     *[_type == "product" && slug.current == $slug][0] {
       _id,
       name,
@@ -62,33 +123,7 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
     }
   `, { slug });
 
-  if (!product) {
-    const customList = await getCustomProducts();
-    const custom = customList.find((c) => c.slug === slug);
-    if (custom) {
-      product = {
-        _id: custom._id,
-        name: custom.name,
-        slug: { current: custom.slug },
-        description: custom.description,
-        price: custom.price,
-        salePrice: custom.salePrice,
-        stock: custom.stockQty,
-        sizeStock: custom.sizeStock,
-        sizes: custom.sizes,
-        image: custom.image,
-        images: custom.images,
-        categorySlug: custom.categorySlug,
-        categoryName: custom.categoryName,
-        rating: 5,
-        isPrebook: custom.isPrebook,
-        prebookAdvanceAmount: custom.prebookAdvanceAmount,
-      };
-    }
-  }
-
   if (product) {
-    const overrides = await getProductOverrides();
     const o = overrides[product._id];
     if (o?.deleted || o?.active === false) {
       return null;
@@ -116,6 +151,7 @@ const getProduct = cache(async (slug: string): Promise<ProductData | null> => {
 
   return product;
 });
+
 
 // Strips HTML, markdown, normalize spaces, and truncates to 150-160 characters
 function cleanDescription(desc?: string): string {

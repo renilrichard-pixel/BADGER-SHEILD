@@ -125,8 +125,16 @@ async function getFeaturedProducts(): Promise<HomeProduct[]> {
       getCustomProducts(),
     ]);
 
+    // Slugs covered by custom products — Sanity products with same slug should be hidden
+    const customSlugs = new Set(
+      custom
+        .filter((c) => !overrides[c._id]?.deleted && c.active !== false && overrides[c._id]?.active !== false)
+        .map((c) => c.slug)
+    );
+
     const merged = (data || [])
       .filter((p) => !overrides[p._id]?.deleted && overrides[p._id]?.active !== false)
+      .filter((p) => !customSlugs.has(p.slug?.current || ''))
       .map((p) => {
         const o = overrides[p._id];
         if (!o) return p;
