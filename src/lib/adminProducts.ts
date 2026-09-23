@@ -279,7 +279,7 @@ export async function createAdminProduct(data: {
   isPrebook?: boolean;
   prebookAdvanceAmount?: number;
 }): Promise<AdminProduct> {
-  const cleanSlug = data.name
+  const baseSlug = data.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
@@ -293,6 +293,16 @@ export async function createAdminProduct(data: {
       : data.imageUrl
       ? [data.imageUrl]
       : [];
+
+  // Ensure the slug is unique among existing custom products
+  const customProducts = await getCustomProducts();
+  let cleanSlug = baseSlug;
+  const existingSlugs = new Set(customProducts.map((p) => p.slug));
+  let suffix = 2;
+  while (existingSlugs.has(cleanSlug)) {
+    cleanSlug = `${baseSlug}-${suffix}`;
+    suffix++;
+  }
 
   const newProduct: AdminProduct = {
     _id: uniqueId,
@@ -316,7 +326,6 @@ export async function createAdminProduct(data: {
     prebookAdvanceAmount: data.prebookAdvanceAmount ? Number(data.prebookAdvanceAmount) : undefined,
   };
 
-  const customProducts = await getCustomProducts();
   customProducts.unshift(newProduct);
   await saveCustomProducts(customProducts);
 
